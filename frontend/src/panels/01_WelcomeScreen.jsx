@@ -1,0 +1,152 @@
+import React from 'react';
+import { 
+  Languages, 
+  Cpu, 
+  BookMarked, 
+  Users, 
+  ArrowRight, 
+  Sparkles, 
+  CheckCircle2,
+  GraduationCap
+} from 'lucide-react';
+import { useApp } from '../context/AppContext';
+
+export const WelcomeScreen = () => {
+  const { setActivePanel, userRole, setUserRole } = useApp();
+
+  return (
+    <div className="max-w-6xl mx-auto py-8 px-6 space-y-10">
+      {/* Top Banner & Hero */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-[#0D1E3A] to-slate-900 border border-slate-800 p-8 md:p-12 shadow-2xl">
+        <div className="absolute top-0 right-0 -mt-12 -mr-12 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute bottom-0 left-1/3 -mb-12 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
+          {/* Left Content */}
+          <div className="lg:col-span-7 space-y-6">
+            <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+              <Sparkles className="w-4 h-4" />
+              <span>Next-Gen Vernacular Education Platform</span>
+            </div>
+
+            <h1 className="text-4xl sm:text-5xl font-extrabold text-white font-outfit tracking-tight leading-tight">
+              BhashaSetu AI
+            </h1>
+            <p className="text-xl font-semibold text-emerald-400">
+              Bridging Languages. Building Brighter Futures.
+            </p>
+            <p className="text-slate-300 text-base leading-relaxed max-w-xl">
+              AI-powered vernacular pedagogy and real-time translation for mother tongue based primary education. Empowering teachers and students across Odisha and beyond.
+            </p>
+
+            {/* Role Toggle Selector */}
+            <div className="pt-2 flex flex-wrap items-center gap-4">
+              <div className="inline-flex p-1 bg-slate-950/80 rounded-2xl border border-slate-800">
+                <button
+                  onClick={() => setUserRole('Teacher')}
+                  className={`px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center space-x-2 ${
+                    userRole === 'Teacher'
+                      ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <GraduationCap className="w-4 h-4" />
+                  <span>I'm a Teacher</span>
+                </button>
+                <button
+                  onClick={() => setUserRole('Student')}
+                  className={`px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center space-x-2 ${
+                    userRole === 'Student'
+                      ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Users className="w-4 h-4" />
+                  <span>I'm a Student</span>
+                </button>
+              </div>
+
+              <button
+                onClick={() => setActivePanel(userRole === 'Teacher' ? 2 : 7)}
+                className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-sm shadow-xl shadow-emerald-500/20 flex items-center space-x-2 transition-all hover:scale-[1.02]"
+              >
+                <span>Launch {userRole === 'Teacher' ? 'Teacher Dashboard' : 'AI Tutor'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Right Hero Graphic Graphic */}
+          <div className="lg:col-span-5 flex justify-center">
+            <div className="relative w-full max-w-sm aspect-square rounded-2xl bg-slate-800/60 border border-slate-700/60 p-6 flex flex-col items-center justify-center text-center shadow-xl backdrop-blur">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-5xl shadow-2xl mb-4 animate-pulse">
+                👩‍🏫
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Primary Classroom AI</h3>
+              <p className="text-xs text-slate-400">Class 3 • Science & Mathematics</p>
+              
+              <div className="mt-4 w-full bg-slate-900/80 p-3 rounded-xl border border-slate-700/40 text-left text-xs space-y-2">
+                <div className="flex items-center justify-between text-slate-300">
+                  <span>Source Language:</span>
+                  <span className="font-semibold text-white">English</span>
+                </div>
+                <div className="flex items-center justify-between text-slate-300">
+                  <span>Vernacular Target:</span>
+                  <span className="font-semibold text-emerald-400">Odia (ଓଡ଼ିଆ)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 4 Core Pillars Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {[
+          {
+            icon: Languages,
+            title: 'Mother Tongue First',
+            desc: 'Seamless real-time support for Odia, Hindi, and regional vernaculars.',
+            color: 'from-emerald-500/20 to-teal-500/10',
+            iconColor: 'text-emerald-400'
+          },
+          {
+            icon: Cpu,
+            title: 'AI-Powered',
+            desc: 'Instant speech translation and age-appropriate pedagogical simplification.',
+            color: 'from-blue-500/20 to-indigo-500/10',
+            iconColor: 'text-blue-400'
+          },
+          {
+            icon: BookMarked,
+            title: 'Curriculum Grounded',
+            desc: 'Grounded in state primary school textbooks via intelligent RAG technology.',
+            color: 'from-purple-500/20 to-pink-500/10',
+            iconColor: 'text-purple-400'
+          },
+          {
+            icon: Users,
+            title: 'Inclusive Learning',
+            desc: 'Interactive audio text-to-speech & adaptive quizzes for every student.',
+            color: 'from-amber-500/20 to-orange-500/10',
+            iconColor: 'text-amber-400'
+          }
+        ].map((feature, idx) => {
+          const Icon = feature.icon;
+          return (
+            <div
+              key={idx}
+              className={`p-6 rounded-2xl bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all duration-300 hover:-translate-y-1 group bg-gradient-to-b ${feature.color}`}
+            >
+              <div className={`w-12 h-12 rounded-xl bg-slate-950 flex items-center justify-center mb-4 border border-slate-800 group-hover:scale-110 transition-transform ${feature.iconColor}`}>
+                <Icon className="w-6 h-6" />
+              </div>
+              <h4 className="text-lg font-bold text-white font-outfit mb-2">{feature.title}</h4>
+              <p className="text-xs text-slate-400 leading-relaxed">{feature.desc}</p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
