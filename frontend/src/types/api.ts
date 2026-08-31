@@ -1,3 +1,44 @@
+export interface AIRespondPayload {
+  text: string;
+  source_language?: string;
+  target_language: string;
+  grade: string;
+  subject: string;
+}
+
+export interface AIRespondResponseData {
+  success: boolean;
+  language: string;
+  response: string;
+  provider_mode?: string;
+  is_development_fallback?: boolean;
+  error?: string;
+}
+
+export interface AITutorPayload {
+  query: string;
+  grade?: string;
+  subject?: string;
+  topic?: string;
+  language?: string;
+}
+
+export interface AITutorResponseData {
+  success: boolean;
+  query: string;
+  detected_language: string;
+  response: string;
+  simple_explanation?: string;
+  key_points?: string[];
+  example?: string;
+  follow_up_question?: string;
+  source?: string;
+  confidence_score?: number;
+  provider_mode?: string;
+  is_development_fallback?: boolean;
+  error?: string;
+}
+
 export interface TranslationPayload {
   text: string;
   source_lang: string;

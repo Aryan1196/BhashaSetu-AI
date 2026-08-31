@@ -86,8 +86,17 @@ def run_all_steps():
         "language": "Odia"
     })
 
+    # Step 8b: LLM Integration Endpoint (POST /api/ai/respond/)
+    ai_respond = execute_test_step(81, "LLM Educational Adaptation (POST /api/ai/respond/)", "POST", "/ai/respond/", {
+        "text": transcript,
+        "source_language": "English",
+        "target_language": "Odia",
+        "grade": "Class 3",
+        "subject": "Science"
+    })
+
     # Step 9: TTS - Teacher plays adapted explanation
-    tts_text = ped.get("simple_explanation", "Test text for TTS") if ped else "Test text for TTS"
+    tts_text = ai_respond.get("response", ped.get("simple_explanation", "Test text for TTS")) if ai_respond else "Test text for TTS"
     tts = execute_test_step(9, "Text-to-Speech (TTS) - Play adapted explanation", "POST", "/speech/synthesize", {
         "text": tts_text,
         "language": "Odia"
@@ -158,6 +167,7 @@ def run_all_steps():
         5: "Speech-to-Text",
         7: "Translation",
         8: "Pedagogical Adaptation",
+        81: "LLM Education Adaptation",
         9: "TTS Synthesis",
         10: "Full Pipeline",
         12: "RAG Query",
@@ -168,7 +178,7 @@ def run_all_steps():
     }
 
     passed = 0
-    for num in [1, 5, 7, 8, 9, 10, 12, 13, 15, 17, 19]:
+    for num in [1, 5, 7, 8, 81, 9, 10, 12, 13, 15, 17, 19]:
         r = results.get(num, {})
         status = "PASS" if r.get("pass") else "FAIL"
         mock = ""

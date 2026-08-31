@@ -10,8 +10,113 @@ from backend.app.services.translation_service import translation_service
 from backend.app.services.pedagogy_service import pedagogy_service
 from backend.app.services.quiz_service import quiz_service
 from backend.app.services.speech_service import tts_service, stt_service
+from backend.app.services.llm_service import llm_service
 from rag.vector_store import rag_engine
 from backend.app.models import LessonRecord, CurriculumDoc, QuizResultRecord
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def ai_respond_view(request):
+    """
+    Primary LLM Integration Endpoint: POST /api/ai/respond/
+    Understands teacher transcript, translates, and adapts to student grade & subject in target language.
+    """
+    data = request.data or {}
+    text = (data.get("text") or "").strip()
+    if not text:
+        return Response(
+            {"success": False, "error": "Empty text provided. Please provide a valid teacher transcript."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    target_lang = (
+        data.get("target_language") or 
+        data.get("target_lang") or 
+        data.get("language") or 
+        "Odia"
+    ).strip()
+
+    source_lang = (
+        data.get("source_language") or 
+        data.get("source_lang") or 
+        "English"
+    ).strip()
+
+    grade = str(data.get("grade", "Class 3")).strip()
+    subject = str(data.get("subject", "Science")).strip()
+
+    res = llm_service.respond(
+        text=text,
+        target_language=target_lang,
+        grade=grade,
+        subject=subject,
+        source_language=source_lang
+    )
+
+    if not res.get("success", False):
+        return Response(res, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    return Response(res, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def ai_tutor_view(request):
+    """
+    AI Student Tutor Endpoint: POST /api/ai/tutor/
+    Accepts question in ANY language and responds in the EXACT SAME language.
+    """
+    data = request.data or {}
+    query = (data.get("query") or data.get("text") or data.get("question") or "").strip()
+    if not query:
+        return Response(
+            {"success": False, "error": "Empty question provided. Please enter a question."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    grade = data.get("grade", "Class 3")
+    subject = data.get("subject", "Science")
+    topic = data.get("topic", "General")
+    language = data.get("language") or data.get("lang") or "auto"
+
+    res = llm_service.tutor_respond(
+        query=query,
+        grade=grade,
+        subject=subject,
+        topic=topic,
+        language_override=language
+    )
+
+    if not res.get("success", False):
+        return Response(res, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    return Response(res, status=status.HTTP_200_OK)
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def llm_key_view(request):
+    """
+    LLM Key Management Endpoint: GET/POST /api/ai/llm-key/
+    Allows inspecting and dynamically updating the active LLM API Key and Model.
+    """
+    if request.method == 'GET':
+        key = (os.getenv("LLM_API_KEY") or os.getenv("GROQ_API_KEY") or os.getenv("OPENAI_API_KEY") or "").strip()
+        has_key = bool(key) and key.lower() not in ["your_api_key_here", "your_llm_api_key_here"]
+        masked = f"{key[:6]}...{key[-4:]}" if has_key and len(key) > 10 else ("Active" if has_key else "Not Configured")
+        return Response({
+            "key": key if has_key else "",
+            "masked_key": masked,
+            "status": "active" if has_key else "unconfigured",
+            "model": os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
+        })
+    else:
+        data = request.data or {}
+        key = (data.get("key") or "").strip()
+        model = (data.get("model") or "").strip()
+        if key:
+            os.environ["LLM_API_KEY"] = key
+        if model:
+            os.environ["LLM_MODEL"] = model
+        return Response({"status": "updated", "model": os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")})
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -206,11 +311,19 @@ def query_rag_view(request):
     subject = data.get("subject", "Science")
     lang = data.get("lang", "Odia")
 
-    res = rag_engine.query(query, grade, subject, lang)
+    tutor_res = llm_service.tutor_respond(query=query, grade=grade, subject=subject, language_override=lang)
+    rag_res = rag_engine.query(query, grade, subject, lang)
+    
+    answer = tutor_res.get("response") or rag_res.get("answer")
+
     return Response({
-        "answer": res["answer"],
-        "source": res["source"],
-        "confidence_score": res["confidence_score"]
+        "answer": answer,
+        "source": rag_res.get("source", f"{grade} {subject}"),
+        "confidence_score": tutor_res.get("confidence_score", 0.95),
+        "detected_language": tutor_res.get("detected_language", lang),
+        "key_points": tutor_res.get("key_points", []),
+        "example": tutor_res.get("example", ""),
+        "follow_up_question": tutor_res.get("follow_up_question", "")
     })
 
 @api_view(['POST'])

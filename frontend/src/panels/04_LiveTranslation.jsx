@@ -33,7 +33,7 @@ export const LiveTranslation = () => {
   const handleEndSession = async () => {
     setIsListening(false);
     setIsProcessing(true);
-    showToast('Translating & adapting via FastAPI backend...');
+    showToast('Adapting lesson via BhashaSetu AI backend...');
     
     await processTranslation(transcript);
     

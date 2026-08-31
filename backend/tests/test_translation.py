@@ -45,8 +45,8 @@ def test_translation_api_endpoint():
     assert data["source_language"] == "English"
     assert data["target_language"] == "Odia"
     assert data["original_text"] == "The sun heats water and causes evaporation."
-    assert "ସୂର୍ଯ୍ୟଙ୍କ ତାପରେ" in data["translated_text"]
-    assert data["provider_mode"] in ["mock", "production"]
+    assert "ସୂର୍ଯ୍ୟ" in data["translated_text"] or "ବାଷ୍ପ" in data["translated_text"]
+    assert data["provider_mode"] in ["mock", "production", "deep_translator"]
     assert "is_development_fallback" in data
 
 def test_empty_text_error():

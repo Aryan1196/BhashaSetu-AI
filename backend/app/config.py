@@ -14,6 +14,9 @@ class Settings:
     
     # API Keys (Loaded from env)
     LLM_API_KEY: str = os.getenv("LLM_API_KEY", "")
+    LLM_MODEL: str = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
+    LLM_API_BASE: str = os.getenv("LLM_API_BASE", "")
+    DEMO_MODE: bool = os.getenv("DEMO_MODE", "False").lower() in ["true", "1", "yes"]
     TRANSLATION_API_KEY: str = os.getenv("TRANSLATION_API_KEY", "")
     SPEECH_API_KEY: str = os.getenv("SPEECH_API_KEY", "")
     

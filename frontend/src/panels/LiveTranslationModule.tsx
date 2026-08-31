@@ -28,11 +28,14 @@ export const LiveTranslationModule: React.FC = () => {
   const [statusText, setStatusText] = useState<'idle' | 'recording' | 'processing' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const [transcript, setTranscript] = useState("Today we are going to learn about the water cycle.");
+  const [transcript, setTranscript] = useState("Water evaporates when heated by the sun.");
   const [interimText, setInterimText] = useState("");
   const [detectedLang, setDetectedLang] = useState<{ lang: string; confidence: number }>({ lang: 'English', confidence: 0.98 });
-  const [translatedText, setTranslatedText] = useState("ଆଜି ଆମେ ପାଣି ଚକ୍ର ବିଷୟରେ ଶିଖିବାକୁ ଯାଉଛୁ ।");
+  const [translatedText, setTranslatedText] = useState("ସୂର୍ଯ୍ୟଙ୍କ ତାପରେ ନଦୀ ଓ ପୋଖରୀର ପାଣି ଗରମ ହୋଇ ଛୋଟ ଛୋଟ ବାଷ୍ପ ପାଲଟିଯାଏ । ଏହାକୁ ବାଷ୍ପୀଭବନ କୁହାଯାଏ, ଯେମିତି ଗରମ ଚା'ରୁ ଧୂଆଁ ଉଠେ ।");
   
+  const [isLLMLoading, setIsLLMLoading] = useState(false);
+  const [llmProviderMode, setLlmProviderMode] = useState<string>('llm');
+
   const [isDeepgramLive, setIsDeepgramLive] = useState(true);
   const [isSpeakingAudio, setIsSpeakingAudio] = useState(false);
   const [waveformBars, setWaveformBars] = useState<number[]>([12, 24, 38, 18, 42, 30, 15, 28, 35, 20, 16, 28, 22, 14]);
@@ -42,6 +45,13 @@ export const LiveTranslationModule: React.FC = () => {
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [inputKey, setInputKey] = useState('23dae82420be843b3b183028b35162dfca167b8c');
   const [keySavedStatus, setKeySavedStatus] = useState<string | null>(null);
+
+  // LLM API Key Modal & State
+  const [llmKey, setLlmKey] = useState<string>('');
+  const [showLLMKeyModal, setShowLLMKeyModal] = useState(false);
+  const [inputLLMKey, setInputLLMKey] = useState('');
+  const [inputLLMModel, setInputLLMModel] = useState('llama-3.3-70b-versatile');
+  const [llmKeySavedStatus, setLLMKeySavedStatus] = useState<string | null>(null);
 
   // Audio & Speech Recognition Refs
   const audioStreamRef = useRef<MediaStream | null>(null);
@@ -55,12 +65,21 @@ export const LiveTranslationModule: React.FC = () => {
   const accumulatedFinalRef = useRef<string>('');
   const translateDebounceRef = useRef<any>(null);
 
-  // Load Deepgram Key on mount
+  // Load API Keys on mount
   useEffect(() => {
     apiClient.getDeepgramKey().then((key) => {
       if (key) {
         setDeepgramKey(key);
         setInputKey(key);
+      }
+    });
+    apiClient.getLLMKey().then((res) => {
+      if (res && res.key) {
+        setLlmKey(res.key);
+        setInputLLMKey(res.key);
+      }
+      if (res && res.model) {
+        setInputLLMModel(res.model);
       }
     });
   }, []);
@@ -115,25 +134,31 @@ export const LiveTranslationModule: React.FC = () => {
     }
   };
 
-  // Real-time live translation debounced trigger
+  // Real-time live LLM translation & adaptation debounced trigger
   const triggerLiveTranslation = (text: string) => {
     if (!text || !text.trim()) return;
     if (translateDebounceRef.current) clearTimeout(translateDebounceRef.current);
 
     translateDebounceRef.current = setTimeout(async () => {
+      setIsLLMLoading(true);
       try {
-        const res = await apiClient.directTranslate(
-          text.trim(),
-          currentLesson.sourceLang || 'English',
-          currentLesson.targetLang || 'Odia'
-        );
-        if (res && res.translated_text) {
-          setTranslatedText(res.translated_text);
+        const res = await apiClient.aiRespond({
+          text: text.trim(),
+          source_language: currentLesson.sourceLang || 'English',
+          target_language: currentLesson.targetLang || 'Odia',
+          grade: currentLesson.grade || 'Class 3',
+          subject: currentLesson.subject || 'Science'
+        });
+        if (res && res.response) {
+          setTranslatedText(res.response);
+          setLlmProviderMode(res.provider_mode || 'llm');
         }
-      } catch (e) {
-        console.warn("Live translation debounce notice:", e);
+      } catch (e: any) {
+        console.warn("Live LLM adaptation notice:", e);
+      } finally {
+        setIsLLMLoading(false);
       }
-    }, 350);
+    }, 450);
   };
 
   // Synchronized text update handler
@@ -336,10 +361,11 @@ export const LiveTranslationModule: React.FC = () => {
     }
   };
 
-  // Workflow Handler: STOP SPEAKING & FINALIZE TRANSLATION
+  // Workflow Handler: STOP SPEAKING & GENERATE LLM EDUCATIONAL RESPONSE
   const handleStopSpeaking = async () => {
     setIsRecording(false);
     setStatusText('processing');
+    setIsLLMLoading(true);
     setInterimText('');
 
     cleanupAudioSession();
@@ -352,25 +378,30 @@ export const LiveTranslationModule: React.FC = () => {
       if (!capturedText && audioChunksRef.current.length > 0) {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         const sttRes = await apiClient.uploadAudio(audioBlob);
-        capturedText = sttRes.transcript || "Today we are going to learn about the water cycle.";
+        capturedText = sttRes.transcript || "Water evaporates when heated by the sun.";
         setTranscript(capturedText);
         setDetectedLang({
           lang: sttRes.detected_language || 'English',
           confidence: sttRes.confidence || 0.98
         });
       } else if (!capturedText) {
-        capturedText = "Today we are going to learn about the water cycle.";
+        capturedText = "Water evaporates when heated by the sun.";
         setTranscript(capturedText);
       }
 
-      // Finalize Translation
-      const transRes = await apiClient.directTranslate(
-        capturedText,
-        currentLesson.sourceLang || 'English',
-        currentLesson.targetLang || 'Odia'
-      );
+      // Generate LLM Educational Response (Understand -> Translate -> Adapt)
+      const aiRes = await apiClient.aiRespond({
+        text: capturedText,
+        source_language: currentLesson.sourceLang || 'English',
+        target_language: currentLesson.targetLang || 'Odia',
+        grade: currentLesson.grade || 'Class 3',
+        subject: currentLesson.subject || 'Science'
+      });
 
-      setTranslatedText(transRes.translated_text);
+      if (aiRes && aiRes.response) {
+        setTranslatedText(aiRes.response);
+        setLlmProviderMode(aiRes.provider_mode || 'llm');
+      }
       setStatusText('success');
 
       // Sync with global pedagogical context
@@ -378,7 +409,9 @@ export const LiveTranslationModule: React.FC = () => {
     } catch (err: any) {
       console.error("Stop and translate error:", err);
       setStatusText('error');
-      setErrorMessage(err.message || "Translation processing failed. Please check backend connection.");
+      setErrorMessage(err.message || "AI explanation processing failed. Please check backend connection.");
+    } finally {
+      setIsLLMLoading(false);
     }
   };
 
@@ -409,6 +442,20 @@ export const LiveTranslationModule: React.FC = () => {
     setTimeout(() => {
       setKeySavedStatus(null);
       setShowKeyModal(false);
+    }, 1200);
+  };
+
+  // Save updated LLM API Key & Model
+  const handleSaveLLMKey = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLLMKeySavedStatus('Updating LLM engine...');
+    await apiClient.saveLLMKey(inputLLMKey.trim(), inputLLMModel.trim());
+    setLlmKey(inputLLMKey.trim());
+    setLLMKeySavedStatus('LLM API Configuration updated successfully! 🎉');
+    showToast('AI LLM Engine updated.');
+    setTimeout(() => {
+      setLLMKeySavedStatus(null);
+      setShowLLMKeyModal(false);
     }, 1200);
   };
 
@@ -444,12 +491,20 @@ export const LiveTranslationModule: React.FC = () => {
                 title="Configure Deepgram API Key"
               >
                 <Key className="w-3 h-3 text-amber-400" />
-                <span>Key: {deepgramKey ? `${deepgramKey.slice(0, 6)}...` : 'Configure'}</span>
+                <span>STT: {deepgramKey ? `${deepgramKey.slice(0, 6)}...` : 'Configure'}</span>
+              </button>
+              <button
+                onClick={() => setShowLLMKeyModal(true)}
+                className="flex items-center space-x-1 px-2.5 py-1 rounded-full bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] text-teal-300 hover:text-white transition-all cursor-pointer"
+                title="Configure AI LLM Key (Groq / OpenAI / Gemini)"
+              >
+                <Sparkles className="w-3 h-3 text-teal-400" />
+                <span>LLM: {llmKey ? `${llmKey.slice(0, 6)}...` : 'Dynamic AI'}</span>
               </button>
             </div>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Real-time live speech capture, instant language identification, and vernacular translation for {currentLesson.grade} • {currentLesson.subject} ({currentLesson.topic})
+            Real-time live speech capture, instant language identification, and LLM pedagogical adaptation for {currentLesson.grade} • {currentLesson.subject} ({currentLesson.topic})
           </p>
         </div>
 
@@ -467,7 +522,7 @@ export const LiveTranslationModule: React.FC = () => {
           <div className="flex items-start space-x-3">
             <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
             <div>
-              <p className="font-bold text-rose-100 text-sm">Live Audio Capture Notice</p>
+              <p className="font-bold text-rose-100 text-sm">Notice</p>
               <p className="mt-0.5">{errorMessage}</p>
             </div>
           </div>
@@ -487,15 +542,17 @@ export const LiveTranslationModule: React.FC = () => {
           <span className={`w-2.5 h-2.5 rounded-full ${
             isRecording 
               ? 'bg-rose-500 animate-ping' 
-              : statusText === 'processing' 
+              : isLLMLoading || statusText === 'processing' 
               ? 'bg-blue-400 animate-pulse' 
               : 'bg-emerald-400'
           }`}></span>
           <span className="text-xs font-semibold text-slate-200 uppercase tracking-wider">
             {isRecording 
               ? 'Recording & Live Transcribing...' 
+              : isLLMLoading
+              ? 'Generating LLM Explanation...'
               : statusText === 'processing' 
-              ? 'Finalizing Translation...' 
+              ? 'Processing Audio...' 
               : 'Ready to Speak'}
           </span>
         </div>
@@ -541,18 +598,18 @@ export const LiveTranslationModule: React.FC = () => {
         </div>
 
         <p className="text-[11px] text-slate-500">
-          Powered by <strong className="text-slate-300">Deepgram Nova-2</strong> real-time streaming speech recognition engine
+          Powered by <strong className="text-slate-300">Deepgram Nova-2</strong> speech recognition & <strong className="text-teal-400">BhashaSetu LLM</strong> vernacular adaptation
         </p>
       </Card>
 
-      {/* Two Column Layout: Transcription vs Translation */}
+      {/* Two Column Layout: LIVE TRANSCRIPT vs BHASHASETU AI */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Left Column: Live Transcription Panel */}
+        {/* Left Column: LIVE TRANSCRIPT Panel */}
         <Card className="space-y-4 border-slate-800 bg-slate-900/80">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <div className="flex items-center space-x-2">
               <Sparkles className="w-4 h-4 text-blue-400" />
-              <h3 className="text-sm font-bold text-white font-outfit">Live Transcription Panel</h3>
+              <h3 className="text-sm font-bold text-white font-outfit uppercase tracking-wider">LIVE TRANSCRIPT</h3>
             </div>
             <div className="flex items-center space-x-2">
               {isRecording && (
@@ -597,41 +654,74 @@ export const LiveTranslationModule: React.FC = () => {
           </div>
         </Card>
 
-        {/* Right Column: Vernacular Translation Panel */}
+        {/* Right Column: BHASHASETU AI Panel */}
         <Card className="space-y-4 border-slate-800 bg-slate-900/80">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <div className="flex items-center space-x-2">
               <Globe className="w-4 h-4 text-teal-400" />
-              <h3 className="text-sm font-bold text-white font-outfit">Live Translation Panel</h3>
+              <h3 className="text-sm font-bold text-white font-outfit uppercase tracking-wider">BHASHASETU AI</h3>
             </div>
-            <select
-              value={currentLesson.targetLang}
-              onChange={(e) => {
-                const newLang = e.target.value;
-                setCurrentLesson({ ...currentLesson, targetLang: newLang });
-                if (transcript.trim()) {
-                  apiClient.directTranslate(transcript.trim(), currentLesson.sourceLang, newLang)
-                    .then(res => setTranslatedText(res.translated_text));
-                }
-              }}
-              className="bg-slate-950 border border-slate-800 text-teal-400 font-bold text-xs rounded-xl px-3 py-1 outline-none hover:border-teal-500 cursor-pointer"
-            >
-              <option value="Odia">Target: Odia (ଓଡ଼ିଆ)</option>
-              <option value="Hindi">Target: Hindi (हिंदी)</option>
-              <option value="English">Target: English</option>
-            </select>
+            <div className="flex items-center space-x-2">
+              <Badge variant="emerald" className="text-[11px]">
+                {currentLesson.grade} • {currentLesson.subject}
+              </Badge>
+              <select
+                value={currentLesson.targetLang}
+                onChange={(e) => {
+                  const newLang = e.target.value;
+                  setCurrentLesson({ ...currentLesson, targetLang: newLang });
+                  if (transcript.trim()) {
+                    setIsLLMLoading(true);
+                    apiClient.aiRespond({
+                      text: transcript.trim(),
+                      source_language: currentLesson.sourceLang,
+                      target_language: newLang,
+                      grade: currentLesson.grade,
+                      subject: currentLesson.subject
+                    }).then(res => {
+                      if (res && res.response) {
+                        setTranslatedText(res.response);
+                        setLlmProviderMode(res.provider_mode || 'llm');
+                      }
+                    }).finally(() => setIsLLMLoading(false));
+                  }
+                }}
+                className="bg-slate-950 border border-slate-800 text-teal-400 font-bold text-xs rounded-xl px-3 py-1 outline-none hover:border-teal-500 cursor-pointer"
+              >
+                <option value="Odia">Target: Odia (ଓଡ଼ିଆ)</option>
+                <option value="Hindi">Target: Hindi (हिंदी)</option>
+                <option value="Bengali">Target: Bengali (বাংলা)</option>
+                <option value="Santhali">Target: Santhali (ᱥᱟᱱᱛᱟᱲᱤ)</option>
+                <option value="Telugu">Target: Telugu (తెలుగు)</option>
+                <option value="Tamil">Target: Tamil (தமிழ்)</option>
+                <option value="Kannada">Target: Kannada (ಕನ್ನಡ)</option>
+                <option value="Marathi">Target: Marathi (मराठी)</option>
+                <option value="English">Target: English</option>
+              </select>
+            </div>
           </div>
 
           <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 min-h-[140px] flex flex-col justify-between relative group">
-            <p className="text-xl font-bold text-teal-300 font-outfit leading-relaxed">
-              {translatedText || "Live translation will appear here in real-time as you speak..."}
-            </p>
+            {isLLMLoading ? (
+              <div className="flex items-center space-x-3 py-6 text-teal-400 animate-pulse">
+                <Sparkles className="w-5 h-5 animate-spin text-teal-400" />
+                <span className="text-sm font-semibold">Generating pedagogical explanation for {currentLesson.grade} in {currentLesson.targetLang}...</span>
+              </div>
+            ) : (
+              <p className="text-xl font-bold text-teal-300 font-outfit leading-relaxed">
+                {translatedText || "AI adapted explanation will appear here in real-time as you speak..."}
+              </p>
+            )}
 
-            <div className="flex items-center justify-end pt-3">
+            <div className="flex items-center justify-between pt-3 border-t border-slate-900">
+              <span className="text-[11px] text-slate-500">
+                Understand → Translate → Adapt
+              </span>
               {/* Speaker / Play TTS Button */}
               <button
                 onClick={handlePlayAudio}
-                className={`p-2.5 rounded-xl transition-all flex items-center space-x-2 cursor-pointer ${
+                disabled={isLLMLoading || !translatedText.trim()}
+                className={`p-2.5 rounded-xl transition-all flex items-center space-x-2 cursor-pointer disabled:opacity-50 ${
                   isSpeakingAudio
                     ? 'bg-teal-500 text-slate-950 animate-bounce shadow-lg shadow-teal-500/30'
                     : 'bg-slate-900 hover:bg-slate-800 text-teal-400 border border-slate-700 hover:border-teal-500'
@@ -646,10 +736,10 @@ export const LiveTranslationModule: React.FC = () => {
 
           <div className="flex items-center justify-between pt-1 text-xs">
             <span className="text-slate-400">
-              Target Script: <strong className="text-teal-400">{currentLesson.targetLang}</strong>
+              Target Language: <strong className="text-teal-400">{currentLesson.targetLang}</strong>
             </span>
             <span className="text-slate-500 font-mono text-[11px]">
-              Live Neural Translation
+              {llmProviderMode === 'production_llm' ? '✨ LLM Engine Active' : 'Primary Vernacular Engine'}
             </span>
           </div>
         </Card>
@@ -735,6 +825,80 @@ export const LiveTranslationModule: React.FC = () => {
                   variant="outline"
                   size="sm"
                   onClick={() => setShowKeyModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                >
+                  Save & Apply Key
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* AI LLM Provider Configuration Modal */}
+      {showLLMKeyModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-5 animate-fade-in">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2">
+                <Sparkles className="w-5 h-5 text-teal-400" />
+                <h3 className="text-base font-bold text-white font-outfit">AI LLM Engine Settings</h3>
+              </div>
+              <button
+                onClick={() => setShowLLMKeyModal(false)}
+                className="text-slate-400 hover:text-white font-bold text-sm px-2 py-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Configure your preferred LLM provider (<strong className="text-teal-300">Groq, OpenAI, Google Gemini</strong>) to empower <strong className="text-white">BhashaSetu AI</strong> with pedagogical adaptation for primary education.
+            </p>
+
+            <form onSubmit={handleSaveLLMKey} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">LLM API Key</label>
+                <input
+                  type="password"
+                  value={inputLLMKey}
+                  onChange={(e) => setInputLLMKey(e.target.value)}
+                  placeholder="e.g. gsk_... or sk-... or AIza..."
+                  className="w-full bg-slate-950 border border-slate-800 text-teal-300 rounded-xl px-4 py-3 text-xs font-mono outline-none focus:border-teal-500 font-medium"
+                />
+                <p className="text-[10px] text-slate-500 mt-1">Leave empty to use built-in primary vernacular engine.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Model Name</label>
+                <select
+                  value={inputLLMModel}
+                  onChange={(e) => setInputLLMModel(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-xl px-3 py-2.5 text-xs outline-none focus:border-teal-500 cursor-pointer"
+                >
+                  <option value="llama-3.3-70b-versatile">Groq: llama-3.3-70b-versatile (Recommended)</option>
+                  <option value="llama-3.1-8b-instant">Groq: llama-3.1-8b-instant</option>
+                  <option value="gpt-4o-mini">OpenAI: gpt-4o-mini</option>
+                  <option value="gemini-1.5-flash">Google: gemini-1.5-flash</option>
+                </select>
+              </div>
+
+              {llmKeySavedStatus && (
+                <p className="text-xs text-emerald-400 font-semibold">{llmKeySavedStatus}</p>
+              )}
+
+              <div className="flex items-center justify-end space-x-3 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowLLMKeyModal(false)}
                 >
                   Cancel
                 </Button>

@@ -1,6 +1,22 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
+# LLM Educational Response Schemas
+class AIRespondRequest(BaseModel):
+    text: str = Field(..., example="Water evaporates when heated by the sun.")
+    target_language: str = Field(default="Odia", example="Odia")
+    grade: str = Field(default="Class 3", example="Class 3")
+    subject: str = Field(default="Science", example="Science")
+    source_language: Optional[str] = Field(default="English", example="English")
+    source_lang: Optional[str] = None
+    target_lang: Optional[str] = None
+
+class AIRespondResponse(BaseModel):
+    success: bool = True
+    language: str = "Odia"
+    response: str
+    error: Optional[str] = None
+
 # Translation & Pedagogy Schemas
 class TranslationRequest(BaseModel):
     text: str = Field(..., example="Today we are going to learn about the water cycle.")

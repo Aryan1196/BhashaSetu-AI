@@ -84,7 +84,12 @@ def test_edge_tts_provider_live():
     assert res_hi["audio_supported"] is True
     assert res_hi["audio_url"].startswith("data:audio/mp3;base64,")
 
-    # Test Odia Limitation
+    # Test Odia with phonetic transliteration
     res_or = provider.synthesize("ସୂର୍ଯ୍ୟଙ୍କ ତାପରେ", "Odia")
-    assert res_or["audio_supported"] is False
-    assert "not supported" in res_or["limitation_message"]
+    assert res_or["audio_supported"] is True
+    assert res_or["audio_url"] is not None
+
+    # Test Unsupported Language
+    res_unsupported = provider.synthesize("Hello", "Klingon")
+    assert res_unsupported["audio_supported"] is False
+    assert "not supported" in res_unsupported["limitation_message"]

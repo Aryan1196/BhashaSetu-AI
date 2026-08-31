@@ -81,25 +81,44 @@ export const AppProvider = ({ children }) => {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // Full pipeline: STT -> Translation -> Pedagogy -> RAG
+  // Full pipeline: STT -> LLM Educational Adaptation (Understand -> Translate -> Adapt)
   const processTranslation = async (text) => {
-    const res = await apiClient.translate({
-      text,
-      source_lang: currentLesson.sourceLang,
-      target_lang: currentLesson.targetLang,
-      grade: currentLesson.grade,
-      subject: currentLesson.subject,
-      topic: currentLesson.topic
-    });
+    try {
+      const [transRes, aiRes] = await Promise.allSettled([
+        apiClient.translate({
+          text,
+          source_lang: currentLesson.sourceLang,
+          target_lang: currentLesson.targetLang,
+          grade: currentLesson.grade,
+          subject: currentLesson.subject,
+          topic: currentLesson.topic
+        }),
+        apiClient.aiRespond({
+          text,
+          source_language: currentLesson.sourceLang,
+          target_language: currentLesson.targetLang,
+          grade: currentLesson.grade,
+          subject: currentLesson.subject
+        })
+      ]);
 
-    setTranslationResult({
-      directTranslation: res.direct_translation,
-      pedagogicalAdaptation: res.pedagogical_adaptation,
-      keyPoints: res.key_points,
-      ragSource: res.rag_source
-    });
+      const transData = transRes.status === 'fulfilled' ? transRes.value : null;
+      const aiData = aiRes.status === 'fulfilled' ? aiRes.value : null;
 
-    return res;
+      const adaptedText = aiData?.response || transData?.pedagogical_adaptation || "ପାଠ୍ୟକ୍ରମ ଆଧାରିତ ଶିକ୍ଷଣ ବିବରଣୀ";
+
+      setTranslationResult({
+        directTranslation: transData?.direct_translation || adaptedText,
+        pedagogicalAdaptation: adaptedText,
+        keyPoints: transData?.key_points || ["Sun warms water and changes it into vapor.", "Vapor rises up to form clouds."],
+        ragSource: transData?.rag_source || `${currentLesson.grade} ${currentLesson.subject}`
+      });
+
+      return transData || { direct_translation: adaptedText, pedagogical_adaptation: adaptedText };
+    } catch (e) {
+      console.warn("Translation pipeline notice:", e);
+      return null;
+    }
   };
 
   // Fetch pedagogical explanation from backend
