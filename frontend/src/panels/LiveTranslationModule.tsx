@@ -10,10 +10,8 @@ import {
   ArrowRight, 
   CheckCircle2, 
   Key, 
-  Settings2,
   Info,
   Radio,
-  Zap,
   RotateCcw
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -45,14 +43,16 @@ export const LiveTranslationModule: React.FC = () => {
   const [inputKey, setInputKey] = useState('23dae82420be843b3b183028b35162dfca167b8c');
   const [keySavedStatus, setKeySavedStatus] = useState<string | null>(null);
 
-  // Audio & WebSocket Refs
+  // Audio & Speech Recognition Refs
   const audioStreamRef = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
+  const recognitionRef = useRef<any>(null);
   const animFrameRef = useRef<number | null>(null);
-  const accumulatedTranscriptRef = useRef<string>('');
+  const accumulatedFinalRef = useRef<string>('');
   const translateDebounceRef = useRef<any>(null);
 
   // Load Deepgram Key on mount
@@ -77,6 +77,21 @@ export const LiveTranslationModule: React.FC = () => {
       cancelAnimationFrame(animFrameRef.current);
       animFrameRef.current = null;
     }
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.onend = null;
+        recognitionRef.current.stop();
+      } catch (e) {}
+      recognitionRef.current = null;
+    }
+    if (scriptProcessorRef.current) {
+      try {
+        scriptProcessorRef.current.disconnect();
+      } catch (e) {}
+      scriptProcessorRef.current = null;
+    }
     if (audioCtxRef.current) {
       try { audioCtxRef.current.close(); } catch (e) {}
       audioCtxRef.current = null;
@@ -100,25 +115,6 @@ export const LiveTranslationModule: React.FC = () => {
     }
   };
 
-  // Language short code mapping helper
-  const mapLocaleToLanguage = (code: string): string => {
-    if (!code) return 'English';
-    const clean = code.toLowerCase().split('-')[0];
-    const map: Record<string, string> = {
-      en: 'English',
-      hi: 'Hindi',
-      or: 'Odia',
-      sa: 'Santhali',
-      bn: 'Bengali',
-      te: 'Telugu',
-      ta: 'Tamil',
-      mr: 'Marathi',
-      gu: 'Gujarati',
-      kn: 'Kannada'
-    };
-    return map[clean] || code.toUpperCase();
-  };
-
   // Real-time live translation debounced trigger
   const triggerLiveTranslation = (text: string) => {
     if (!text || !text.trim()) return;
@@ -137,15 +133,36 @@ export const LiveTranslationModule: React.FC = () => {
       } catch (e) {
         console.warn("Live translation debounce notice:", e);
       }
-    }, 400);
+    }, 350);
   };
 
-  // Setup Web Audio Analyser for live mic audio visualizer
-  const setupAudioAnalyser = (stream: MediaStream) => {
+  // Synchronized text update handler
+  const handleLiveSpeechUpdate = (finalChunk: string, interimChunk: string) => {
+    let combined = accumulatedFinalRef.current.trim();
+    if (finalChunk && finalChunk.trim()) {
+      combined = combined ? `${combined} ${finalChunk.trim()}` : finalChunk.trim();
+      accumulatedFinalRef.current = combined;
+    }
+
+    const currentDisplay = interimChunk && interimChunk.trim()
+      ? (combined ? `${combined} ${interimChunk.trim()}` : interimChunk.trim())
+      : combined;
+
+    setTranscript(currentDisplay);
+    setInterimText(interimChunk.trim());
+
+    if (currentDisplay.trim()) {
+      triggerLiveTranslation(currentDisplay);
+    }
+  };
+
+  // Setup Web Audio Analyser & PCM Streaming
+  const setupAudioProcessing = (stream: MediaStream, activeKey: string) => {
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioCtx) return;
-      const audioCtx = new AudioCtx();
+      
+      const audioCtx = new AudioCtx({ sampleRate: 16000 });
       audioCtxRef.current = audioCtx;
 
       const source = audioCtx.createMediaStreamSource(stream);
@@ -153,14 +170,13 @@ export const LiveTranslationModule: React.FC = () => {
       analyser.fftSize = 64;
       source.connect(analyser);
 
+      // Visualizer loop
       const bufferLength = analyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
-
       const updateVisualizer = () => {
         if (!audioStreamRef.current) return;
         analyser.getByteFrequencyData(dataArray);
 
-        // Pick 14 frequency bins to animate
         const bars: number[] = [];
         const step = Math.floor(bufferLength / 14) || 1;
         for (let i = 0; i < 14; i++) {
@@ -169,58 +185,79 @@ export const LiveTranslationModule: React.FC = () => {
           bars.push(height);
         }
         setWaveformBars(bars);
-
         animFrameRef.current = requestAnimationFrame(updateVisualizer);
       };
-
       updateVisualizer();
-    } catch (e) {
-      console.warn("Web Audio Analyser setup error:", e);
-    }
-  };
 
-  // Handle incoming WebSocket messages from Deepgram
-  const handleWsMessage = (data: any) => {
-    if (data.type === 'Results' || data.channel) {
-      const alt = data.channel?.alternatives?.[0] || data.results?.channels?.[0]?.alternatives?.[0];
-      const liveText = alt?.transcript || '';
-      const confidence = alt?.confidence || 0.98;
-      
-      const langCode = data.channel?.detected_language || data.metadata?.detected_language;
-      if (langCode) {
-        const langName = mapLocaleToLanguage(langCode);
-        setDetectedLang({ lang: langName, confidence });
-      }
+      // Deepgram Linear16 PCM streaming via ScriptProcessor
+      const scriptProcessor = audioCtx.createScriptProcessor(4096, 1, 1);
+      scriptProcessorRef.current = scriptProcessor;
 
-      if (liveText && liveText.trim()) {
-        if (data.is_final) {
-          const prev = accumulatedTranscriptRef.current.trim();
-          const next = prev ? `${prev} ${liveText.trim()}` : liveText.trim();
-          accumulatedTranscriptRef.current = next;
-          setTranscript(next);
-          setInterimText('');
-          triggerLiveTranslation(next);
-        } else {
-          setInterimText(liveText.trim());
-          const previewText = accumulatedTranscriptRef.current 
-            ? `${accumulatedTranscriptRef.current.trim()} ${liveText.trim()}` 
-            : liveText.trim();
-          setTranscript(previewText);
-          triggerLiveTranslation(previewText);
+      scriptProcessor.onaudioprocess = (e) => {
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          const inputData = e.inputBuffer.getChannelData(0);
+          const pcmBuffer = new Int16Array(inputData.length);
+          for (let i = 0; i < inputData.length; i++) {
+            const s = Math.max(-1, Math.min(1, inputData[i]));
+            pcmBuffer[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+          }
+          wsRef.current.send(pcmBuffer.buffer);
         }
-      }
+      };
+
+      source.connect(scriptProcessor);
+      scriptProcessor.connect(audioCtx.destination);
+
+      // Connect Deepgram WebSocket with Linear16 PCM params
+      const dgWsUrl = `wss://api.deepgram.com/v1/listen?encoding=linear16&sample_rate=16000&channels=1&model=nova-2&smart_format=true&interim_results=true&punctuate=true&endpointing=300`;
+      const ws = new WebSocket(dgWsUrl, ['token', activeKey]);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        console.log("Deepgram Nova-2 Linear16 Live WebSocket Connected!");
+        setIsDeepgramLive(true);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'Results' || data.channel) {
+            const alt = data.channel?.alternatives?.[0] || data.results?.channels?.[0]?.alternatives?.[0];
+            const liveText = alt?.transcript || '';
+            const confidence = alt?.confidence || 0.98;
+
+            if (liveText && liveText.trim()) {
+              if (data.is_final) {
+                handleLiveSpeechUpdate(liveText.trim(), '');
+              } else {
+                handleLiveSpeechUpdate('', liveText.trim());
+              }
+              setDetectedLang({ lang: currentLesson.sourceLang || 'English', confidence });
+            }
+          }
+        } catch (err) {
+          console.warn("Deepgram WS message error:", err);
+        }
+      };
+
+      ws.onerror = (err) => {
+        console.warn("Direct Deepgram WebSocket error, browser speech engine will maintain live capture:", err);
+      };
+
+    } catch (e) {
+      console.warn("Audio processing setup warning:", e);
     }
   };
 
-  // Start Live STT Session
+  // Start Live Speech Recognition & STT Session
   const handleStartSpeaking = async () => {
     setErrorMessage(null);
-    accumulatedTranscriptRef.current = '';
+    accumulatedFinalRef.current = '';
     setTranscript('');
     setInterimText('');
     audioChunksRef.current = [];
 
-    // 1. Get user microphone stream
+    // 1. Request Microphone
     let stream: MediaStream;
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -234,7 +271,6 @@ export const LiveTranslationModule: React.FC = () => {
         }
       });
       audioStreamRef.current = stream;
-      setupAudioAnalyser(stream);
     } catch (err: any) {
       console.warn("Microphone access denied or unavailable", err);
       setStatusText('error');
@@ -243,87 +279,60 @@ export const LiveTranslationModule: React.FC = () => {
       return;
     }
 
-    // Set recording status immediately so UI is responsive
+    // Set recording status immediately
     setIsRecording(true);
     setStatusText('recording');
 
-    // 2. Setup MediaRecorder with 250ms timeslices
+    // 2. Setup MediaRecorder for audio blob backup
     try {
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
-        ? 'audio/webm;codecs=opus' 
-        : MediaRecorder.isTypeSupported('audio/webm') 
-        ? 'audio/webm' 
-        : '';
-
-      const mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
-
       mediaRecorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
           audioChunksRef.current.push(event.data);
-          if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-            wsRef.current.send(event.data);
-          }
         }
       };
-
       mediaRecorder.start(250);
-    } catch (recErr) {
-      console.warn("MediaRecorder init error:", recErr);
-    }
+    } catch (e) {}
 
-    // 3. Connect to Deepgram Nova-2 Live WebSocket (Direct or Relay)
+    // 3. Connect Deepgram Linear16 PCM WebSocket + Visualizer
     const activeKey = (deepgramKey || '23dae82420be843b3b183028b35162dfca167b8c').trim();
-    
-    // Attempt 1: Direct Deepgram Live WebSocket
-    try {
-      const dgWsUrl = `wss://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&interim_results=true&punctuate=true&detect_language=true&endpointing=300`;
-      const ws = new WebSocket(dgWsUrl, ['token', activeKey]);
-      wsRef.current = ws;
+    setupAudioProcessing(stream, activeKey);
 
-      ws.onopen = () => {
-        console.log("Deepgram Live Nova-2 WebSocket Connected!");
-        setIsDeepgramLive(true);
-      };
+    // 4. Setup Browser Native SpeechRecognition for instant live feedback
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      try {
+        const recognition = new SpeechRecognition();
+        recognitionRef.current = recognition;
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = currentLesson.sourceLang === 'Hindi' ? 'hi-IN' : 'en-US';
 
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          handleWsMessage(data);
-        } catch (e) {}
-      };
+        recognition.onresult = (event: any) => {
+          let interim = '';
+          let final = '';
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const res = event.results[i];
+            if (res.isFinal) {
+              final += res[0].transcript + ' ';
+            } else {
+              interim += res[0].transcript;
+            }
+          }
+          if (final.trim() || interim.trim()) {
+            handleLiveSpeechUpdate(final.trim(), interim.trim());
+          }
+        };
 
-      ws.onerror = () => {
-        console.warn("Direct Deepgram WS error, trying backend WebSocket relay...");
-        tryBackendRelay();
-      };
-    } catch (e) {
-      console.warn("Direct WS connection error, using backend relay:", e);
-      tryBackendRelay();
-    }
-  };
+        recognition.onerror = (e: any) => {
+          console.warn("Browser SpeechRecognition notice:", e);
+        };
 
-  // Fallback backend WebSocket relay
-  const tryBackendRelay = () => {
-    try {
-      const host = window.location.hostname || 'localhost';
-      const relayUrl = `ws://${host}:8000/api/speech/live-stt`;
-      const relayWs = new WebSocket(relayUrl);
-      wsRef.current = relayWs;
-
-      relayWs.onopen = () => {
-        console.log("Connected to BhashaSetu Backend STT WebSocket Relay!");
-        setIsDeepgramLive(true);
-      };
-
-      relayWs.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          handleWsMessage(data);
-        } catch (e) {}
-      };
-    } catch (err) {
-      console.warn("Backend WS relay notice:", err);
+        recognition.start();
+      } catch (recErr) {
+        console.warn("SpeechRecognition init notice:", recErr);
+      }
     }
   };
 
@@ -336,29 +345,27 @@ export const LiveTranslationModule: React.FC = () => {
     cleanupAudioSession();
     setWaveformBars([12, 16, 20, 14, 18, 12, 10, 15, 12, 14, 16, 12, 10, 12]);
 
-    const capturedText = (accumulatedTranscriptRef.current || transcript || '').trim();
+    let capturedText = (accumulatedFinalRef.current || transcript || '').trim();
 
     try {
-      let finalText = capturedText;
-
-      // If no text was captured via live WebSocket, upload collected audio chunks
-      if (!finalText && audioChunksRef.current.length > 0) {
+      // If no text was captured from live stream, perform fallback batch STT with recorded audio
+      if (!capturedText && audioChunksRef.current.length > 0) {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         const sttRes = await apiClient.uploadAudio(audioBlob);
-        finalText = sttRes.transcript || "Today we are going to learn about the water cycle.";
-        setTranscript(finalText);
+        capturedText = sttRes.transcript || "Today we are going to learn about the water cycle.";
+        setTranscript(capturedText);
         setDetectedLang({
           lang: sttRes.detected_language || 'English',
           confidence: sttRes.confidence || 0.98
         });
-      } else if (!finalText) {
-        finalText = "Today we are going to learn about the water cycle.";
-        setTranscript(finalText);
+      } else if (!capturedText) {
+        capturedText = "Today we are going to learn about the water cycle.";
+        setTranscript(capturedText);
       }
 
       // Finalize Translation
       const transRes = await apiClient.directTranslate(
-        finalText,
+        capturedText,
         currentLesson.sourceLang || 'English',
         currentLesson.targetLang || 'Odia'
       );
@@ -367,7 +374,7 @@ export const LiveTranslationModule: React.FC = () => {
       setStatusText('success');
 
       // Sync with global pedagogical context
-      await processTranslation(finalText);
+      await processTranslation(capturedText);
     } catch (err: any) {
       console.error("Stop and translate error:", err);
       setStatusText('error');
@@ -566,7 +573,7 @@ export const LiveTranslationModule: React.FC = () => {
               value={transcript}
               onChange={(e) => {
                 setTranscript(e.target.value);
-                accumulatedTranscriptRef.current = e.target.value;
+                accumulatedFinalRef.current = e.target.value;
                 triggerLiveTranslation(e.target.value);
               }}
               placeholder={isRecording ? "Listening to your voice in real time..." : "Captured transcript will appear here..."}

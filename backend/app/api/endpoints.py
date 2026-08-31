@@ -135,8 +135,7 @@ def update_deepgram_key(payload: DeepgramKeyPayload):
 @router.websocket("/speech/live-stt")
 async def live_stt_ws(websocket: WebSocket):
     await websocket.accept()
-    key = os.getenv("DEEPGRAM_API_KEY", "23dae82420be843b3b183028b35162dfca167b8c").strip()
-    deepgram_ws_url = "wss://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&interim_results=true&detect_language=true&endpointing=300"
+    deepgram_ws_url = "wss://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&interim_results=true&punctuate=true&endpointing=300"
     
     try:
         async with websockets.connect(deepgram_ws_url, subprotocols=['token', key]) as dg_ws:
