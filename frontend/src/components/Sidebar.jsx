@@ -97,10 +97,10 @@ export const Sidebar = () => {
               <button
                 key={item.id}
                 onClick={() => handleSelectPanel(item)}
-                className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 ${
+                className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 cursor-pointer ${
                   isActive
                     ? 'bg-blue-600 text-white shadow-md font-semibold'
-                    : 'hover:bg-slate-800/60 text-slate-300 hover:text-white'
+                    : 'hover:bg-slate-800/60 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
@@ -112,12 +112,12 @@ export const Sidebar = () => {
 
         {/* Bottom Profile Badge */}
         <div className="p-4 border-t border-slate-800/80 bg-[#071120] flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-full bg-blue-900 border border-blue-700/60 flex items-center justify-center text-white font-bold shadow">
+          <div className="w-10 h-10 rounded-full bg-blue-600/20 text-blue-500 border border-blue-500/30 flex items-center justify-center font-bold shadow">
             👩‍🏫
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-white truncate">{userProfile.name}</p>
-            <p className="text-xs text-teal-400 truncate">{userProfile.school}</p>
+            <p className="text-xs text-teal-400 truncate font-medium">{userProfile.school}</p>
           </div>
         </div>
       </aside>

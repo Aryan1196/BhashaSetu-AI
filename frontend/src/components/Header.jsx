@@ -1,9 +1,8 @@
-import React from 'react';
-import { Bell, Globe, Sparkles, ChevronRight, Activity } from 'lucide-react';
+import { Bell, Globe, Sparkles, ChevronRight, Activity, Sun, Moon } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export const Header = () => {
-  const { activePanel, setActivePanel, userRole, setUserRole, backendStatus, toastMessage } = useApp();
+  const { activePanel, setActivePanel, userRole, setUserRole, backendStatus, toastMessage, theme, toggleTheme } = useApp();
 
   const panelTitles = {
     1: 'Welcome & Overview',
@@ -88,6 +87,20 @@ export const Header = () => {
           <Globe className="w-3.5 h-3.5 text-teal-400" />
           <span>English (Odia)</span>
         </div>
+
+        {/* Theme Toggle (Light / Dark Mode) */}
+        <button
+          onClick={toggleTheme}
+          className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-all cursor-pointer flex items-center justify-center"
+          title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+          aria-label="Toggle Theme"
+        >
+          {theme === 'dark' ? (
+            <Sun className="w-4 h-4 text-amber-400 hover:rotate-45 transition-transform" />
+          ) : (
+            <Moon className="w-4 h-4 text-indigo-600 hover:-rotate-12 transition-transform" />
+          )}
+        </button>
 
         {/* Notification Bell */}
         <button className="relative p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 transition-colors">

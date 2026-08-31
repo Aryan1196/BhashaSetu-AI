@@ -13,13 +13,13 @@ export const Button: React.FC<ButtonProps> = ({
   className = '',
   ...props
 }) => {
-  const baseStyles = 'rounded-xl font-bold transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-50';
+  const baseStyles = 'rounded-xl font-bold transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer';
 
   const variants = {
-    primary: 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/30',
-    secondary: 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700',
-    danger: 'bg-rose-600 hover:bg-rose-500 text-white shadow-lg',
-    outline: 'border border-blue-500/40 text-blue-400 hover:bg-blue-500/10'
+    primary: 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/30 active:scale-[0.98]',
+    secondary: 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 active:scale-[0.98]',
+    danger: 'bg-rose-600 hover:bg-rose-500 text-white shadow-lg active:scale-[0.98]',
+    outline: 'border border-blue-500/40 text-blue-400 hover:bg-blue-500/10 active:scale-[0.98]'
   };
 
   const sizes = {
