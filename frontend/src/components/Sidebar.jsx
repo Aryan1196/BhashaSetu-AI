@@ -5,44 +5,51 @@ import {
   LayoutDashboard, 
   BookOpen, 
   Mic, 
-  FileText, 
   Bot, 
-  HelpCircle, 
-  Award,
-  BarChart3, 
   Settings,
   Sparkles,
   Menu,
   X,
-  GraduationCap
+  GraduationCap,
+  Users
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export const Sidebar = () => {
-  const { activePanel, setActivePanel, userProfile } = useApp();
+  const { activePanel, setActivePanel, userProfile, userRole, setUserRole } = useApp();
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
-  const navItems = [
-    { id: 1, label: 'Welcome Screen', icon: Home, panel: 1, path: '/' },
-    { id: 2, label: 'Teacher Dashboard', icon: LayoutDashboard, panel: 2, path: '/teacher/dashboard' },
-    { id: 12, label: 'Student Dashboard', icon: GraduationCap, panel: 12, path: '/student/dashboard' },
-    { id: 3, label: 'New Lesson Setup', icon: BookOpen, panel: 3, path: '/teacher/new-lesson' },
-    { id: 4, label: 'Live Translation', icon: Mic, panel: 4, path: '/teacher/live' },
-    { id: 5, label: 'Adaptation View', icon: Sparkles, panel: 5, path: '/pedagogy' },
-    { id: 6, label: 'Curriculum (RAG)', icon: FileText, panel: 6, path: '/curriculum' },
-    { id: 7, label: 'Student AI Tutor', icon: Bot, panel: 7, path: '/tutor' },
-    { id: 8, label: 'Quiz Mode', icon: HelpCircle, panel: 8, path: '/quiz' },
-    { id: 9, label: 'Quiz Results', icon: Award, panel: 9, path: '/quiz/results' },
-    { id: 10, label: 'Reports & Analytics', icon: BarChart3, panel: 10, path: '/reports' },
-    { id: 11, label: 'Settings', icon: Settings, panel: 11, path: '/settings' },
+  const allNavItems = [
+    { id: 1, label: 'Welcome Screen', icon: Home, panel: 1, path: '/welcome', roles: ['Teacher', 'Student'] },
+    { id: 2, label: 'Teacher Dashboard', icon: LayoutDashboard, panel: 2, path: '/teacher/dashboard', roles: ['Teacher'] },
+    { id: 12, label: 'Student Dashboard', icon: GraduationCap, panel: 12, path: '/student/dashboard', roles: ['Student'] },
+    { id: 3, label: 'New Lesson Setup', icon: BookOpen, panel: 3, path: '/teacher/new-lesson', roles: ['Teacher'] },
+    { id: 4, label: 'Live Translation', icon: Mic, panel: 4, path: '/teacher/live', roles: ['Teacher'] },
+    { id: 5, label: 'Adaptation View', icon: Sparkles, panel: 5, path: '/pedagogy', roles: ['Teacher', 'Student'] },
+    { id: 7, label: 'Student AI Tutor', icon: Bot, panel: 7, path: '/tutor', roles: ['Student'] },
+    { id: 11, label: 'Settings', icon: Settings, panel: 11, path: '/settings', roles: ['Teacher', 'Student'] },
   ];
+
+  // Filter menu items dynamically based on active userRole (Teacher vs Student)
+  const navItems = allNavItems.filter(item => item.roles.includes(userRole));
 
   const handleSelectPanel = (item) => {
     setActivePanel(item.panel);
     navigate(item.path);
     setMobileOpen(false);
+  };
+
+  const toggleUserRole = (newRole) => {
+    setUserRole(newRole);
+    if (newRole === 'Teacher') {
+      setActivePanel(2);
+      navigate('/teacher/dashboard');
+    } else {
+      setActivePanel(12);
+      navigate('/student/dashboard');
+    }
   };
 
   return (
@@ -73,7 +80,7 @@ export const Sidebar = () => {
         ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
         {/* Brand Header */}
-        <div className="p-5 border-b border-slate-800/60 flex items-center space-x-3 cursor-pointer" onClick={() => handleSelectPanel(navItems[0])}>
+        <div className="p-5 border-b border-slate-800/60 flex items-center space-x-3 cursor-pointer" onClick={() => handleSelectPanel(allNavItems[0])}>
           <div className="w-10 h-10 rounded-xl bg-blue-700 flex items-center justify-center shadow-lg text-white font-bold text-xl border border-blue-500/30">
             ⚡
           </div>
@@ -85,10 +92,44 @@ export const Sidebar = () => {
           </div>
         </div>
 
+        {/* Role Mode Switcher Pills */}
+        <div className="p-3 border-b border-slate-800/40 bg-slate-950/60">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">
+            Selected Category
+          </div>
+          <div className="grid grid-cols-2 gap-1 p-1 bg-slate-900 rounded-xl border border-slate-800">
+            <button
+              onClick={() => toggleUserRole('Teacher')}
+              className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1 ${
+                userRole === 'Teacher'
+                  ? 'bg-blue-600 text-white shadow'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <GraduationCap className="w-3.5 h-3.5" />
+              <span>Teacher</span>
+            </button>
+            <button
+              onClick={() => toggleUserRole('Student')}
+              className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1 ${
+                userRole === 'Student'
+                  ? 'bg-teal-600 text-white shadow'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>Student</span>
+            </button>
+          </div>
+        </div>
+
         {/* Navigation List */}
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-          <div className="px-3 py-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-            Navigation Menu
+          <div className="px-3 py-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+            <span>{userRole} Menu</span>
+            <span className="text-[10px] text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded-full font-mono">
+              {userRole} Mode
+            </span>
           </div>
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -99,8 +140,10 @@ export const Sidebar = () => {
                 onClick={() => handleSelectPanel(item)}
                 className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 cursor-pointer ${
                   isActive
-                    ? 'bg-blue-600 text-white shadow-md font-semibold'
-                    : 'hover:bg-slate-800/60 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                    ? userRole === 'Teacher' 
+                      ? 'bg-blue-600 text-white shadow-md font-semibold'
+                      : 'bg-teal-600 text-white shadow-md font-semibold'
+                    : 'hover:bg-slate-800/60 text-slate-300 hover:text-white'
                 }`}
               >
                 <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
@@ -112,12 +155,16 @@ export const Sidebar = () => {
 
         {/* Bottom Profile Badge */}
         <div className="p-4 border-t border-slate-800/80 bg-[#071120] flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-full bg-blue-600/20 text-blue-500 border border-blue-500/30 flex items-center justify-center font-bold shadow">
-            👩‍🏫
+          <div className="w-10 h-10 rounded-full bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold text-lg shadow">
+            {userRole === 'Teacher' ? '👩‍🏫' : '🎓'}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white truncate">{userProfile.name}</p>
-            <p className="text-xs text-teal-400 truncate font-medium">{userProfile.school}</p>
+            <p className="text-sm font-semibold text-white truncate">
+              {userRole === 'Teacher' ? (userProfile.name || 'Priyanka Mohapatra') : 'Aarav Kumar'}
+            </p>
+            <p className="text-xs text-teal-400 truncate font-medium">
+              {userRole === 'Teacher' ? (userProfile.school || 'Govt. Primary School') : 'Class 3 • Student'}
+            </p>
           </div>
         </div>
       </aside>

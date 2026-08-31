@@ -1,14 +1,17 @@
 import sys
 import os
-from fastapi.testclient import TestClient
+import json
+import django
 
 # Ensure root workspace is in python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.bhashasetu_backend.settings")
+django.setup()
 
-from backend.app.main import app
+from django.test import Client
 from backend.app.services.translation_service import translation_service, MockTranslationProvider
 
-client = TestClient(app)
+client = Client()
 
 def test_translation_service_mock_unit():
     """Unit test for MockTranslationProvider direct translation logic."""
@@ -35,7 +38,7 @@ def test_translation_api_endpoint():
         "source_language": "English",
         "target_language": "Odia"
     }
-    response = client.post("/api/translation/translate", json=payload)
+    response = client.post("/api/translation/translate", data=json.dumps(payload), content_type="application/json")
     assert response.status_code == 200
     
     data = response.json()
@@ -53,7 +56,7 @@ def test_empty_text_error():
         "source_language": "English",
         "target_language": "Odia"
     }
-    response = client.post("/api/translation/translate", json=payload)
+    response = client.post("/api/translation/translate", data=json.dumps(payload), content_type="application/json")
     assert response.status_code == 400
     assert "Empty text" in response.json()["detail"]
 
@@ -64,6 +67,6 @@ def test_unsupported_language_error():
         "source_language": "English",
         "target_language": "Klingon"
     }
-    response = client.post("/api/translation/translate", json=payload)
+    response = client.post("/api/translation/translate", data=json.dumps(payload), content_type="application/json")
     assert response.status_code == 422
     assert "Unsupported target language" in response.json()["detail"]

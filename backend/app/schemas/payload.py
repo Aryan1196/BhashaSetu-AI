@@ -6,6 +6,8 @@ class TranslationRequest(BaseModel):
     text: str = Field(..., example="Today we are going to learn about the water cycle.")
     source_lang: str = Field(default="English", example="English")
     target_lang: str = Field(default="Odia", example="Odia")
+    source_language: Optional[str] = None
+    target_language: Optional[str] = None
     grade: str = Field(default="Class 3", example="Class 3")
     subject: str = Field(default="Science", example="Science")
     topic: Optional[str] = Field(default="Water Cycle", example="Water Cycle")

@@ -1,14 +1,17 @@
 import sys
 import os
-from fastapi.testclient import TestClient
+import json
+import django
 
 # Ensure root workspace is in python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.bhashasetu_backend.settings")
+django.setup()
 
-from backend.app.main import app
+from django.test import Client
 from backend.app.services.speech_service import tts_service, MockTTSProvider
 
-client = TestClient(app)
+client = Client()
 
 def test_tts_service_english_odia():
     """Unit test for English and Odia TTS synthesis."""
@@ -36,7 +39,7 @@ def test_tts_api_endpoint_success():
         "text": "ସୂର୍ଯ୍ୟଙ୍କ ତାପରେ ପାଣି ଗରମ ହୋଇ ବାଷ୍ପ ପାଲଟିଯାଏ ।",
         "language": "Odia"
     }
-    response = client.post("/api/speech/synthesize", json=payload)
+    response = client.post("/api/speech/synthesize", data=json.dumps(payload), content_type="application/json")
     assert response.status_code == 200
     
     data = response.json()
@@ -51,7 +54,7 @@ def test_tts_api_empty_text_error():
         "text": "",
         "language": "Odia"
     }
-    response = client.post("/api/speech/synthesize", json=payload)
+    response = client.post("/api/speech/synthesize", data=json.dumps(payload), content_type="application/json")
     assert response.status_code == 400
     assert "Empty text" in response.json()["detail"]
 
@@ -61,7 +64,7 @@ def test_tts_api_unsupported_language_error():
         "text": "Hello world",
         "language": "Klingon"
     }
-    response = client.post("/api/speech/synthesize", json=payload)
+    response = client.post("/api/speech/synthesize", data=json.dumps(payload), content_type="application/json")
     assert response.status_code == 422
     assert "Unsupported language" in response.json()["detail"]
 

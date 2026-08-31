@@ -124,10 +124,11 @@ export const NewLessonSetup = () => {
                 <select
                   value={formData.sourceLang}
                   onChange={(e) => setFormData({ ...formData, sourceLang: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl p-3.5 text-sm outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl p-3.5 text-sm outline-none focus:border-emerald-500 font-medium"
                 >
                   <option value="English">English</option>
-                  <option value="Hindi">Hindi</option>
+                  <option value="Hindi">Hindi (हिंदी)</option>
+                  <option value="Odia">Odia (ଓଡ଼ିଆ)</option>
                 </select>
               </div>
               <div>
@@ -139,6 +140,7 @@ export const NewLessonSetup = () => {
                 >
                   <option value="Odia">Odia (ଓଡ଼ିଆ)</option>
                   <option value="Hindi">Hindi (हिंदी)</option>
+                  <option value="English">English</option>
                 </select>
               </div>
             </div>

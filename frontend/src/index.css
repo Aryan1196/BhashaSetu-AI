@@ -228,18 +228,49 @@
 }
 
 .light .text-slate-300 {
-  color: #334155 !important;
+  color: #1e293b !important;
 }
 
 .light .text-slate-400 {
-  color: #64748b !important;
+  color: #334155 !important;
 }
 
 .light .text-slate-500 {
-  color: #64748b !important;
+  color: #475569 !important;
+}
+
+.light .text-slate-600 {
+  color: #1e293b !important;
 }
 
 .light .hover\:text-white:hover {
+  color: #0f172a !important;
+}
+
+/* Specific Navigation Sidebar rules for Light Mode */
+.light aside nav button {
+  color: #1e293b !important;
+  font-weight: 500;
+}
+
+.light aside nav button:hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+.light aside nav button.bg-blue-600,
+.light aside nav button.bg-blue-600 *,
+.light aside nav button.bg-blue-600 span,
+.light aside nav button.bg-blue-600 svg {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+.light aside nav button svg {
+  color: #334155 !important;
+}
+
+.light aside nav button:hover svg {
   color: #0f172a !important;
 }
 

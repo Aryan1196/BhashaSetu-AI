@@ -99,12 +99,12 @@ export const StudentAITutor = () => {
   const handlePlayTTS = async (msgId, text) => {
     setSpeakingId(msgId);
     const res = await apiClient.synthesizeSpeech(text, selectedLang);
-    if (res.audio_supported === false) {
-      showToast(res.limitation_message || 'TTS is unsupported for this language.');
+    if (res && res.audio_url && res.audio_supported) {
+      speakText(text, res.audio_url, selectedLang);
     } else {
-      speakText(text);
+      speakText(text, selectedLang);
     }
-    setTimeout(() => setSpeakingId(null), 3000);
+    setTimeout(() => setSpeakingId(null), 3500);
   };
 
   return (
@@ -139,7 +139,7 @@ export const StudentAITutor = () => {
           <div key={msg.id} className={`flex ${msg.sender === 'You' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-xl rounded-2xl p-5 shadow-md space-y-3 ${
               msg.sender === 'You'
-                ? 'bg-blue-50/90 border border-blue-200 text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100'
+                ? 'bg-blue-600/20 border border-blue-500/30 text-slate-100'
                 : msg.isError
                   ? 'bg-rose-950/50 border border-rose-500/40 text-rose-200'
                   : 'bg-slate-950 border border-slate-800 text-white'
@@ -240,7 +240,7 @@ export const StudentAITutor = () => {
           value={inputQuery}
           onChange={(e) => setInputQuery(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-          className="flex-1 bg-transparent text-slate-900 dark:text-white text-base outline-none px-2 font-medium"
+          className="flex-1 bg-transparent text-slate-100 text-base outline-none px-2 font-medium"
         />
 
         <button

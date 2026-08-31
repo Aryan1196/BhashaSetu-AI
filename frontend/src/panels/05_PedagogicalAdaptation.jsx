@@ -23,10 +23,10 @@ export const PedagogicalAdaptation = () => {
 
   const handlePlayTTS = async (text) => {
     const res = await apiClient.synthesizeSpeech(text, currentLesson.targetLang);
-    if (res.audio_supported === false) {
-      showToast(res.limitation_message || 'TTS unsupported for this language.');
+    if (res && res.audio_url && res.audio_supported) {
+      speakText(text, res.audio_url, currentLesson.targetLang);
     } else {
-      speakText(text);
+      speakText(text, currentLesson.targetLang);
     }
   };
 
@@ -50,17 +50,10 @@ export const PedagogicalAdaptation = () => {
         <div className="flex items-center space-x-2">
           <button
             onClick={() => { setActivePanel(7); navigate('/tutor'); }}
-            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-teal-400 border border-slate-700 text-xs font-semibold flex items-center space-x-1.5"
+            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center space-x-1.5 shadow-lg"
           >
             <Bot className="w-4 h-4" />
-            <span>AI Tutor</span>
-          </button>
-          <button
-            onClick={() => { setActivePanel(8); navigate('/quiz'); }}
-            className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center space-x-1.5 shadow-lg"
-          >
-            <HelpCircle className="w-4 h-4" />
-            <span>Launch Quiz</span>
+            <span>Ask AI Tutor</span>
           </button>
         </div>
       </div>
@@ -179,10 +172,10 @@ export const PedagogicalAdaptation = () => {
         </button>
 
         <button
-          onClick={() => { setActivePanel(8); navigate('/quiz'); }}
+          onClick={() => { setActivePanel(7); navigate('/tutor'); }}
           className="px-6 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-xl flex items-center space-x-2 transition-all"
         >
-          <span>Take Concept Quiz</span>
+          <span>Ask AI Tutor</span>
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>

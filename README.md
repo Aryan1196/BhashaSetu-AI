@@ -17,11 +17,11 @@ BhashaSetu AI is an end-to-end full-stack educational technology platform engine
 ## 🏛️ System Architecture & Stack
 
 - **Frontend**: React, TypeScript, Vite, Tailwind CSS (Government EdTech aesthetic)
-- **Backend**: Python 3.10+, FastAPI, Uvicorn, Pydantic
+- **Backend**: Python 3.10+, Django, Django REST Framework, Django Channels (ASGI WebSockets)
 - **Speech Engine**: Deepgram Nova-2 Live WebSocket Streaming Speech-to-Text & Edge-TTS Neural Speech Synthesis
 - **AI Abstraction Layer**: Modular interfaces for LLM, Translation, Speech-to-Text, and Text-to-Speech
 - **RAG Engine**: Vector store retriever (ChromaDB / FAISS) with textbook PDF document chunking
-- **Database**: SQLite (local development abstraction) with full PostgreSQL support
+- **Database**: Django ORM with SQLite (`bhashasetu.db`) and PostgreSQL support
 
 ---
 
@@ -30,7 +30,7 @@ BhashaSetu AI is an end-to-end full-stack educational technology platform engine
 ```
 BhashaSetu-AI/
 ├── frontend/               # React + TypeScript + Vite UI
-├── backend/                # FastAPI Application & AI Service Layer
+├── backend/                # Django REST & Channels Application & AI Service Layer
 ├── rag/                    # Vector store, document processing & RAG engine
 ├── data/                   # State textbooks & vector DB storage
 ├── docs/                   # System Architecture & API Specifications
@@ -43,7 +43,7 @@ BhashaSetu-AI/
 
 ## 🚀 Quick Start (Local Development)
 
-### 1. Backend Setup (FastAPI)
+### 1. Backend Setup (Django)
 
 ```bash
 # Navigate to root and create virtual environment
@@ -53,10 +53,13 @@ venv\Scripts\activate  # Linux/Mac: source venv/bin/activate
 # Install dependencies
 pip install -r backend/requirements.txt
 
-# Start FastAPI server
-python -m uvicorn backend.app.main:app --reload --port 8000
+# Run migrations
+python backend/manage.py migrate
+
+# Start Django development server
+python backend/manage.py runserver 8000
 ```
-API Documentation will be live at: `http://localhost:8000/docs`
+Backend API will be live at: `http://localhost:8000/api/health`
 
 ### 2. Frontend Setup (React TypeScript)
 

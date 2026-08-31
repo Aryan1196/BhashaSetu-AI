@@ -1,8 +1,9 @@
-import { Bell, Globe, Sparkles, ChevronRight, Activity, Sun, Moon } from 'lucide-react';
+import React from 'react';
+import { Bell, Globe, Sparkles, ChevronRight, Sun, Moon } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export const Header = () => {
-  const { activePanel, setActivePanel, userRole, setUserRole, backendStatus, toastMessage, theme, toggleTheme } = useApp();
+  const { activePanel, currentLesson, setCurrentLesson, toastMessage, theme, toggleTheme } = useApp();
 
   const panelTitles = {
     1: 'Welcome & Overview',
@@ -10,12 +11,9 @@ export const Header = () => {
     3: 'New Lesson / Class Setup',
     4: 'Live Translation (Speech-to-Text)',
     5: 'Translation & Pedagogical Adaptation',
-    6: 'Curriculum Upload & RAG Documents',
     7: 'Student AI Vernacular Tutor',
-    8: 'Interactive Quiz Mode',
-    9: 'Quiz Results & Progress',
-    10: 'Reports & Teacher Analytics',
-    11: 'Profile & System Settings'
+    11: 'Profile & System Settings',
+    12: 'Student Dashboard'
   };
 
   return (
@@ -23,69 +21,28 @@ export const Header = () => {
       {/* Current Panel Title & Navigation Breadcrumb */}
       <div className="flex items-center space-x-3">
         <span className="bg-blue-600/20 text-blue-400 font-mono font-semibold text-xs px-2.5 py-1 rounded-md border border-blue-500/30">
-          Govt. Jharkhand EdTech • Panel {activePanel}/11
+          BhashaSetu AI
         </span>
         <ChevronRight className="w-4 h-4 text-slate-600" />
         <h2 className="text-lg font-bold text-white font-outfit tracking-tight">
-          {panelTitles[activePanel]}
+          {panelTitles[activePanel] || 'Dashboard'}
         </h2>
       </div>
 
-      {/* Quick Jump Selector & User Controls */}
+      {/* User Controls & Language Dropdown */}
       <div className="flex items-center space-x-3">
-        {/* Backend Status Badge */}
-        <div className="flex items-center space-x-1.5 bg-slate-900 border border-slate-800 px-3 py-1 rounded-lg text-[11px] text-slate-300">
-          <Activity className={`w-3.5 h-3.5 ${backendStatus.includes('Live') ? 'text-emerald-400' : 'text-amber-400'}`} />
-          <span className="font-mono">{backendStatus}</span>
-        </div>
-
-        {/* Quick Panel Dropdown Jump */}
-        <select
-          value={activePanel}
-          onChange={(e) => setActivePanel(Number(e.target.value))}
-          className="bg-slate-900 border border-slate-700 text-slate-200 text-xs font-medium rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer"
-        >
-          <option value={1}>1. Welcome / Landing Screen</option>
-          <option value={2}>2. Teacher Dashboard</option>
-          <option value={3}>3. New Lesson Setup</option>
-          <option value={4}>4. Live Translation</option>
-          <option value={5}>5. Adaptation & Translation</option>
-          <option value={6}>6. Curriculum Management</option>
-          <option value={7}>7. Student AI Tutor</option>
-          <option value={8}>8. Quiz</option>
-          <option value={9}>9. Quiz Results</option>
-          <option value={10}>10. Reports & Analytics</option>
-          <option value={11}>11. Settings / Profile</option>
-        </select>
-
-        {/* Role Toggle Switch */}
-        <div className="bg-slate-900 border border-slate-800 p-0.5 rounded-lg flex items-center">
-          <button
-            onClick={() => setUserRole('Teacher')}
-            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
-              userRole === 'Teacher'
-                ? 'bg-blue-600 text-white shadow'
-                : 'text-slate-400 hover:text-white'
-            }`}
+        {/* Target Language Selection Dropdown */}
+        <div className="flex items-center space-x-1.5 bg-slate-900 border border-slate-700 px-2.5 py-1.5 rounded-lg text-xs font-medium">
+          <Globe className="w-3.5 h-3.5 text-teal-400 shrink-0" />
+          <select
+            value={currentLesson.targetLang || 'Odia'}
+            onChange={(e) => setCurrentLesson((prev) => ({ ...prev, targetLang: e.target.value }))}
+            className="bg-transparent text-teal-400 font-bold outline-none cursor-pointer text-xs"
           >
-            Teacher
-          </button>
-          <button
-            onClick={() => setUserRole('Student')}
-            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
-              userRole === 'Student'
-                ? 'bg-teal-600 text-white shadow'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Student
-          </button>
-        </div>
-
-        {/* Language selector icon */}
-        <div className="flex items-center space-x-1 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-lg text-slate-300 text-xs font-medium">
-          <Globe className="w-3.5 h-3.5 text-teal-400" />
-          <span>English (Odia)</span>
+            <option value="Odia" className="bg-slate-900 text-slate-200">Odia (ଓଡ଼ିଆ)</option>
+            <option value="Hindi" className="bg-slate-900 text-slate-200">Hindi (हिंदी)</option>
+            <option value="English" className="bg-slate-900 text-slate-200">English</option>
+          </select>
         </div>
 
         {/* Theme Toggle (Light / Dark Mode) */}

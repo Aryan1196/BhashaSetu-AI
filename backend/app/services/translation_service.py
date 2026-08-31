@@ -1,8 +1,31 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Any
 import os
-import requests
+import re
+import logging
 from backend.app.config import settings
+
+logger = logging.getLogger("bhashasetu-backend")
+
+def clean_input_text(text: str) -> str:
+    if not text:
+        return ""
+    # Deduplicate consecutive repeated words (e.g., "Hi Hi" -> "Hi")
+    cleaned = re.sub(r'\b(\w+)(?:\s+\1\b)+', r'\1', text, flags=re.IGNORECASE)
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+    return cleaned
+
+def clean_translated_text(text: str, target_language: str = "Odia") -> str:
+    if not text:
+        return ""
+    cleaned = text.strip()
+    # Replace stray ASCII vertical bars '|' with proper Odia/Hindi purna chhed '।'
+    if target_language in ["Odia", "Hindi"]:
+        cleaned = re.sub(r'\s*\|\s*', ' । ', cleaned)
+        cleaned = re.sub(r'।\s*।', '।', cleaned)
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+    return cleaned
+
 
 class BaseTranslationProvider(ABC):
     @abstractmethod
@@ -38,34 +61,88 @@ class MockTranslationProvider(BaseTranslationProvider):
     }
 
     def translate(self, text: str, source_language: str, target_language: str) -> Dict[str, Any]:
+        clean_src = clean_input_text(text)
         target_dict = self.DICTIONARY.get(target_language, {})
         
-        if text in target_dict:
-            translated = target_dict[text]
+        if clean_src in target_dict:
+            translated = target_dict[clean_src]
         elif target_language == "Odia":
-            translated = f"[Odia Dev Fallback]: ସୂର୍ଯ୍ୟଙ୍କ ତାପରେ {text} ।"
+            translated = f"[Odia Fallback]: {clean_src}"
         elif target_language == "Hindi":
-            translated = f"[Hindi Dev Fallback]: {text}"
+            translated = f"[Hindi Fallback]: {clean_src}"
         else:
-            translated = f"[{target_language} Dev Fallback]: {text}"
+            translated = f"[{target_language} Fallback]: {clean_src}"
 
         return {
             "source_language": source_language,
             "target_language": target_language,
-            "original_text": text,
-            "translated_text": translated,
+            "original_text": clean_src,
+            "translated_text": clean_translated_text(translated, target_language),
             "provider_mode": "mock",
             "is_development_fallback": True
         }
 
     def detect_language(self, text: str) -> str:
-        if any(char in text for char in ["ଆ", "ଓ", "କ", "ଗ"]):
+        if any(char in text for char in ["ଆ", "ଓ", "କ", "ଗ", "ସ", "ର", "ତ"]):
             return "Odia"
-        elif any(char in text for char in ["अ", "आ", "क", "ग"]):
+        elif any(char in text for char in ["अ", "आ", "क", "ग", "स", "र", "त"]):
             return "Hindi"
         elif any(char in text for char in ["ᱛ", "ᱮ", "ᱦ", "ᱧ"]):
             return "Santhali"
         return "English"
+
+
+class DeepTranslatorProvider(BaseTranslationProvider):
+    """
+    Live Translation Provider using deep-translator (Google Translate engine).
+    Supports dynamic real-time translation for Odia ('or'), Hindi ('hi'), English ('en'), Santhali ('sat').
+    """
+
+    LANG_MAP = {
+        "Odia": "or",
+        "Hindi": "hi",
+        "English": "en",
+        "Santhali": "sat",
+        "or": "or",
+        "hi": "hi",
+        "en": "en",
+        "sat": "sat"
+    }
+
+    def translate(self, text: str, source_language: str, target_language: str) -> Dict[str, Any]:
+        clean_src = clean_input_text(text)
+        if not clean_src:
+            return {
+                "source_language": source_language,
+                "target_language": target_language,
+                "original_text": text,
+                "translated_text": "",
+                "provider_mode": "deep_translator",
+                "is_development_fallback": False
+            }
+
+        target_code = self.LANG_MAP.get(target_language, "or")
+        source_code = self.LANG_MAP.get(source_language, "auto")
+
+        try:
+            from deep_translator import GoogleTranslator
+            raw_translated = GoogleTranslator(source=source_code, target=target_code).translate(clean_src)
+            formatted = clean_translated_text(raw_translated, target_language)
+
+            return {
+                "source_language": source_language,
+                "target_language": target_language,
+                "original_text": clean_src,
+                "translated_text": formatted,
+                "provider_mode": "deep_translator",
+                "is_development_fallback": False
+            }
+        except Exception as e:
+            logger.warning(f"DeepTranslator failed for '{clean_src[:20]}...': {e}. Falling back to mock dictionary.")
+            return MockTranslationProvider().translate(clean_src, source_language, target_language)
+
+    def detect_language(self, text: str) -> str:
+        return MockTranslationProvider().detect_language(text)
 
 
 class ExternalTranslationProvider(BaseTranslationProvider):
@@ -76,26 +153,17 @@ class ExternalTranslationProvider(BaseTranslationProvider):
     
     def __init__(self, api_key: str):
         self.api_key = api_key
+        self.deep_provider = DeepTranslatorProvider()
 
     def translate(self, text: str, source_language: str, target_language: str) -> Dict[str, Any]:
-        # Production API integration logic
         if not self.api_key:
-            # Fallback if key missing at runtime
-            return MockTranslationProvider().translate(text, source_language, target_language)
+            return self.deep_provider.translate(text, source_language, target_language)
 
         try:
-            # Simulated call to external Indic/LLM Translation endpoint
-            translated = f"[Production IndicTrans - {target_language}]: {text}"
-            return {
-                "source_language": source_language,
-                "target_language": target_language,
-                "original_text": text,
-                "translated_text": translated,
-                "provider_mode": "production",
-                "is_development_fallback": False
-            }
+            res = self.deep_provider.translate(text, source_language, target_language)
+            res["provider_mode"] = "production_deep_translator"
+            return res
         except Exception as e:
-            # On network/API error, safely return fallback
             mock_res = MockTranslationProvider().translate(text, source_language, target_language)
             mock_res["error"] = str(e)
             return mock_res
@@ -107,15 +175,11 @@ class ExternalTranslationProvider(BaseTranslationProvider):
 class TranslationService:
     """
     Modular Translation Service Facade.
-    Dynamically switches between production and mock providers based on environment config.
+    Uses DeepTranslatorProvider for real-time translation across Odia, Hindi, English, and Santhali.
     """
     
     def __init__(self):
-        api_key = settings.TRANSLATION_API_KEY or settings.LLM_API_KEY
-        if api_key and settings.TRANSLATION_PROVIDER != "mock":
-            self.provider: BaseTranslationProvider = ExternalTranslationProvider(api_key)
-        else:
-            self.provider: BaseTranslationProvider = MockTranslationProvider()
+        self.provider: BaseTranslationProvider = DeepTranslatorProvider()
 
     def translate(self, text: str, source_language: str = "English", target_language: str = "Odia") -> Dict[str, Any]:
         return self.provider.translate(text, source_language, target_language)

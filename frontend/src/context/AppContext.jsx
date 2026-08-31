@@ -72,7 +72,7 @@ export const AppProvider = ({ children }) => {
   // Check backend health on mount
   useEffect(() => {
     apiClient.getHealth().then((res) => {
-      setBackendStatus(res.status === 'online' || res.status === 'ok' ? 'Backend Live (FastAPI)' : 'Offline (Fallback Mode)');
+      setBackendStatus(res.status === 'online' || res.status === 'ok' ? 'Backend Live (Django)' : 'Offline (Fallback Mode)');
     });
   }, []);
 
@@ -144,11 +144,61 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const speakText = (text) => {
+  // Dual-mode TTS speaker: Backend synthesized audio URL or browser SpeechSynthesis fallback
+  const speakText = (text, audioUrlOrLang = 'Odia', langParam = 'Odia') => {
+    if (!text) return;
+
+    if (typeof audioUrlOrLang === 'string' && (audioUrlOrLang.startsWith('data:audio') || audioUrlOrLang.startsWith('http'))) {
+      try {
+        const audio = new Audio(audioUrlOrLang);
+        setIsSpeaking(true);
+        audio.onended = () => setIsSpeaking(false);
+        audio.onerror = () => {
+          setIsSpeaking(false);
+          speakBrowserUtterance(text, langParam);
+        };
+        audio.play().then(() => {
+          return;
+        }).catch(() => {
+          speakBrowserUtterance(text, langParam);
+        });
+        return;
+      } catch (err) {
+        console.warn('Audio play failed, falling back to browser synthesis', err);
+      }
+    }
+
+    const lang = typeof audioUrlOrLang === 'string' && !audioUrlOrLang.startsWith('data:') && !audioUrlOrLang.startsWith('http') 
+      ? audioUrlOrLang 
+      : langParam;
+
+    speakBrowserUtterance(text, lang);
+  };
+
+  const speakBrowserUtterance = (text, lang = 'Odia') => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.9;
+      utterance.rate = 0.85;
+      
+      const langMap = {
+        'Odia': 'or-IN',
+        'Hindi': 'hi-IN',
+        'English': 'en-IN',
+        'Santhali': 'sat-IN',
+        'Bengali': 'bn-IN'
+      };
+      utterance.lang = langMap[lang] || 'or-IN';
+
+      const voices = window.speechSynthesis.getVoices();
+      const targetVoice = voices.find(v => 
+        v.lang.toLowerCase().includes(utterance.lang.toLowerCase()) || 
+        v.lang.toLowerCase().includes((lang || 'Odia').toLowerCase().slice(0, 2))
+      );
+      if (targetVoice) {
+        utterance.voice = targetVoice;
+      }
+
       utterance.onstart = () => setIsSpeaking(true);
       utterance.onend = () => setIsSpeaking(false);
       utterance.onerror = () => setIsSpeaking(false);

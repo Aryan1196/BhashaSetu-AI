@@ -74,15 +74,9 @@ export const StudentDashboard: React.FC = () => {
 
           <div className="flex items-center space-x-3">
             {/* 4. Continue Learning Button */}
-            <Button variant="secondary" onClick={() => handleNavigate('/pedagogy', 5)}>
-              <Play className="w-4 h-4 text-teal-400 fill-current" />
+            <Button variant="primary" onClick={() => handleNavigate('/pedagogy', 5)}>
+              <Play className="w-4 h-4 fill-current" />
               <span>Continue Learning</span>
-            </Button>
-
-            {/* 5. Take Quiz Button */}
-            <Button variant="primary" onClick={() => handleNavigate('/quiz', 8)}>
-              <HelpCircle className="w-4 h-4" />
-              <span>Take Quiz</span>
             </Button>
           </div>
         </div>
@@ -151,44 +145,11 @@ export const StudentDashboard: React.FC = () => {
 
               <div className="pt-2 text-slate-400 flex items-center justify-between font-mono">
                 <span>Completed Lessons: <strong>3/4</strong></span>
-                <span>Quiz Accuracy: <strong>89%</strong></span>
               </div>
             </div>
           </Card>
         </div>
       </div>
-
-      {/* 6. Recent Scores Section */}
-      <Card className="space-y-4 p-6">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-          <h3 className="text-base font-bold text-white font-outfit flex items-center gap-2">
-            <Award className="w-4 h-4 text-amber-400" />
-            <span>Recent Quiz Scores</span>
-          </h3>
-          <Button variant="outline" size="sm" onClick={() => handleNavigate('/quiz/results', 9)}>
-            <span>View Performance</span>
-            <ArrowRight className="w-3 h-3" />
-          </Button>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {recentScores.map((scoreItem) => (
-            <div key={scoreItem.id} className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
-              <div className="flex items-center justify-between">
-                <CheckCircle2 className="w-4 h-4 text-teal-400" />
-                <span className="text-[10px] text-slate-500 font-mono">{scoreItem.date}</span>
-              </div>
-              <p className="text-sm font-bold text-white truncate">{scoreItem.topic}</p>
-              <div className="flex items-baseline justify-between pt-1">
-                <span className="text-xl font-extrabold text-teal-400 font-mono">{scoreItem.score}</span>
-                <Badge variant={scoreItem.percentage >= 80 ? 'emerald' : 'amber'}>
-                  {scoreItem.percentage}%
-                </Badge>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
     </div>
   );
 };

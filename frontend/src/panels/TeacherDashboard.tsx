@@ -157,7 +157,7 @@ export const TeacherDashboard: React.FC = () => {
                   >
                     <option value="Odia">Odia (ଓଡ଼ିଆ)</option>
                     <option value="Hindi">Hindi (हिंदी)</option>
-                    <option value="Santhali">Santhali (ᱥᱟᱱᱛᱟᱲᱤ)</option>
+                    <option value="English">English</option>
                   </select>
                 </div>
               </div>

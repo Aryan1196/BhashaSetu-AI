@@ -50,12 +50,12 @@ export const QuizScreen = () => {
     }
   };
 
-  const handlePlayTTS = async (text) => {
+  const handlePlayQuestionTTS = async (text) => {
     const res = await apiClient.synthesizeSpeech(text, currentLesson.targetLang);
-    if (res.audio_supported === false) {
-      showToast(res.limitation_message || 'TTS unsupported for this language.');
+    if (res && res.audio_url && res.audio_supported) {
+      speakText(text, res.audio_url, currentLesson.targetLang);
     } else {
-      speakText(text);
+      speakText(text, currentLesson.targetLang);
     }
   };
 

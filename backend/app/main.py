@@ -70,3 +70,63 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("backend.app.main:app", host="0.0.0.0", port=8000, reload=True)
+
+
+import io
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+from deep_translator import GoogleTranslator
+from gTTS import gTTS
+
+app = FastAPI(title="English to Odia Translator & TTS API")
+
+# Define the request body schema
+class TranslationRequest(BaseModel):
+    text: str
+
+# Define response schema for text-only translations
+class TranslationResponse(BaseModel):
+    original_text: str
+    translated_text: str
+
+
+@app.post("/translate", response_model=TranslationResponse)
+def translate_text(request: TranslationRequest):
+    """
+    Translates English text to Odia and returns JSON.
+    """
+    if not request.text.strip():
+        raise HTTPException(status_code=400, detail="Text input cannot be empty.")
+    
+    translated = GoogleTranslator(source="en", target="or").translate(request.text)
+    
+    return TranslationResponse(
+        original_text=request.text,
+        translated_text=translated
+    )
+
+
+@app.post("/translate-to-voice")
+def translate_and_speak(request: TranslationRequest):
+    """
+    Translates English text to Odia and returns an MP3 audio stream.
+    """
+    if not request.text.strip():
+        raise HTTPException(status_code=400, detail="Text input cannot be empty.")
+    
+    # 1. Translate
+    translated_text = GoogleTranslator(source="en", target="or").translate(request.text)
+    
+    # 2. Convert translated Odia text to audio stream in memory
+    tts = gTTS(text=translated_text, lang="or")
+    audio_bytes = io.BytesIO()
+    tts.write_to_fp(audio_bytes)
+    audio_bytes.seek(0)
+    
+    # 3. Stream MP3 response back to client
+    return StreamingResponse(
+        audio_bytes, 
+        media_type="audio/mpeg",
+        headers={"Content-Disposition": "inline; filename=odia_audio.mp3"}
+    )

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Languages, 
   Cpu, 
@@ -7,12 +8,28 @@ import {
   ArrowRight, 
   Sparkles, 
   CheckCircle2,
-  GraduationCap
+  GraduationCap,
+  RefreshCw
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export const WelcomeScreen = () => {
-  const { setActivePanel, userRole, setUserRole } = useApp();
+  const { setActivePanel, userRole } = useApp();
+  const navigate = useNavigate();
+
+  const handleLaunchDashboard = () => {
+    if (userRole === 'Teacher') {
+      setActivePanel(2);
+      navigate('/teacher/dashboard');
+    } else {
+      setActivePanel(12);
+      navigate('/student/dashboard');
+    }
+  };
+
+  const handleSwitchCategory = () => {
+    navigate('/select-role');
+  };
 
   return (
     <div className="max-w-6xl mx-auto py-8 px-6 space-y-10">
@@ -24,9 +41,18 @@ export const WelcomeScreen = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
           {/* Left Content */}
           <div className="lg:col-span-7 space-y-6">
-            <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
-              <Sparkles className="w-4 h-4" />
-              <span>Next-Gen Vernacular Education Platform</span>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+                <Sparkles className="w-4 h-4" />
+                <span>Active Mode: <strong className="text-white ml-1 font-bold">{userRole} Category</strong></span>
+              </div>
+              <button
+                onClick={handleSwitchCategory}
+                className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition-colors cursor-pointer"
+              >
+                <RefreshCw className="w-3 h-3 text-teal-400" />
+                <span>Switch Category</span>
+              </button>
             </div>
 
             <h1 className="text-4xl sm:text-5xl font-extrabold text-white font-outfit tracking-tight leading-tight">
@@ -36,59 +62,38 @@ export const WelcomeScreen = () => {
               Bridging Languages. Building Brighter Futures.
             </p>
             <p className="text-slate-300 text-base leading-relaxed max-w-xl">
-              AI-powered vernacular pedagogy and real-time translation for mother tongue based primary education. Empowering teachers and students across Odisha and beyond.
+              {userRole === 'Teacher' 
+                ? 'Empowering primary school teachers with real-time vernacular translation, grade-aware pedagogy, and lesson management.'
+                : 'Empowering primary school students with an interactive mother tongue AI Tutor and voice-assisted STEM learning.'}
             </p>
 
-            {/* Role Toggle Selector */}
+            {/* Launch Button */}
             <div className="pt-2 flex flex-wrap items-center gap-4">
-              <div className="inline-flex p-1 bg-slate-950/80 rounded-2xl border border-slate-800">
-                <button
-                  onClick={() => setUserRole('Teacher')}
-                  className={`px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center space-x-2 ${
-                    userRole === 'Teacher'
-                      ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <GraduationCap className="w-4 h-4" />
-                  <span>I'm a Teacher</span>
-                </button>
-                <button
-                  onClick={() => setUserRole('Student')}
-                  className={`px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center space-x-2 ${
-                    userRole === 'Student'
-                      ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <Users className="w-4 h-4" />
-                  <span>I'm a Student</span>
-                </button>
-              </div>
-
               <button
-                onClick={() => setActivePanel(userRole === 'Teacher' ? 2 : 7)}
-                className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-sm shadow-xl shadow-emerald-500/20 flex items-center space-x-2 transition-all hover:scale-[1.02]"
+                onClick={handleLaunchDashboard}
+                className="px-7 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-sm shadow-xl shadow-emerald-500/20 flex items-center space-x-2.5 transition-all hover:scale-[1.02] cursor-pointer"
               >
-                <span>Launch {userRole === 'Teacher' ? 'Teacher Dashboard' : 'AI Tutor'}</span>
+                <span>Launch {userRole === 'Teacher' ? 'Teacher Dashboard' : 'Student Dashboard'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          {/* Right Hero Graphic Graphic */}
+          {/* Right Hero Visual Card */}
           <div className="lg:col-span-5 flex justify-center">
             <div className="relative w-full max-w-sm aspect-square rounded-2xl bg-slate-800/60 border border-slate-700/60 p-6 flex flex-col items-center justify-center text-center shadow-xl backdrop-blur">
               <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-5xl shadow-2xl mb-4 animate-pulse">
-                👩‍🏫
+                {userRole === 'Teacher' ? '👩‍🏫' : '🎓'}
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">Primary Classroom AI</h3>
+              <h3 className="text-xl font-bold text-white mb-2">
+                {userRole === 'Teacher' ? 'Primary Educator AI' : 'Student Learning Hub'}
+              </h3>
               <p className="text-xs text-slate-400">Class 3 • Science & Mathematics</p>
               
               <div className="mt-4 w-full bg-slate-900/80 p-3 rounded-xl border border-slate-700/40 text-left text-xs space-y-2">
                 <div className="flex items-center justify-between text-slate-300">
-                  <span>Source Language:</span>
-                  <span className="font-semibold text-white">English</span>
+                  <span>Category Mode:</span>
+                  <span className="font-bold text-teal-400">{userRole}</span>
                 </div>
                 <div className="flex items-center justify-between text-slate-300">
                   <span>Vernacular Target:</span>
@@ -100,34 +105,27 @@ export const WelcomeScreen = () => {
         </div>
       </div>
 
-      {/* 4 Core Pillars Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      {/* 3 Core Pillars Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         {[
           {
             icon: Languages,
             title: 'Mother Tongue First',
-            desc: 'Seamless real-time support for Odia, Hindi, and regional vernaculars.',
+            desc: 'Seamless real-time support for Odia, Hindi, and English.',
             color: 'from-emerald-500/20 to-teal-500/10',
             iconColor: 'text-emerald-400'
           },
           {
             icon: Cpu,
-            title: 'AI-Powered',
-            desc: 'Instant speech translation and age-appropriate pedagogical simplification.',
+            title: 'AI-Powered Pedagogy',
+            desc: 'Instant speech translation and age-appropriate STEM simplification.',
             color: 'from-blue-500/20 to-indigo-500/10',
             iconColor: 'text-blue-400'
           },
           {
-            icon: BookMarked,
-            title: 'Curriculum Grounded',
-            desc: 'Grounded in state primary school textbooks via intelligent RAG technology.',
-            color: 'from-purple-500/20 to-pink-500/10',
-            iconColor: 'text-purple-400'
-          },
-          {
             icon: Users,
-            title: 'Inclusive Learning',
-            desc: 'Interactive audio text-to-speech & adaptive quizzes for every student.',
+            title: 'Inclusive Primary Learning',
+            desc: 'Interactive audio text-to-speech & adaptive mother tongue support for every student.',
             color: 'from-amber-500/20 to-orange-500/10',
             iconColor: 'text-amber-400'
           }

@@ -2,35 +2,43 @@
 BhashaSetu AI - Full End-to-End Integration Test
 Tests the complete workflow from Teacher Dashboard through Quiz Results.
 """
-import requests
 import json
 import sys
 import os
+import django
+
+# Ensure root workspace is in python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.bhashasetu_backend.settings")
+django.setup()
+
+from django.test import Client
 
 # Fix Windows console encoding for Odia/Unicode output
 if sys.platform == 'win32':
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
-BASE_URL = "http://localhost:8000/api"
+django_client = Client()
 results = {}
 
 def execute_test_step(step_num, description, method, endpoint, payload=None, expected_status=200):
-    url = f"{BASE_URL}{endpoint}"
+    path = f"/api{endpoint}"
     print(f"\n{'='*60}")
     print(f"Step {step_num}: {description}")
-    print(f"  {method} {url}")
+    print(f"  {method} {path}")
     
-    try:
-        if method == "GET":
-            r = requests.get(url, timeout=10)
-        else:
-            r = requests.post(url, json=payload, timeout=10)
+    if method == "GET":
+        r = django_client.get(path)
+    else:
+        r = django_client.post(path, data=json.dumps(payload) if payload else "", content_type="application/json")
         
-        data = r.json()
-        status = "PASS" if r.status_code == expected_status else "FAIL"
-        print(f"  Status: {r.status_code} [{status}]")
+    status_code = r.status_code
+    data = r.json()
         
-        # Print key fields safely
+    status = "PASS" if status_code == expected_status else "FAIL"
+    print(f"  Status: {status_code} [{status}]")
+    
+    if data and isinstance(data, dict):
         for key in list(data.keys())[:6]:
             val = str(data[key])[:100]
             print(f"    {key}: {val}")
@@ -39,17 +47,13 @@ def execute_test_step(step_num, description, method, endpoint, payload=None, exp
             print(f"  >> Provider Mode: {data['provider_mode']}")
         if "is_development_fallback" in data:
             print(f"  >> Development Fallback: {data['is_development_fallback']}")
-        
-        results[step_num] = {"status": r.status_code, "pass": r.status_code == expected_status, "data": data}
-        return data
-    except Exception as e:
-        print(f"  ERROR: {e}")
-        results[step_num] = {"status": 0, "pass": False, "data": None}
-        return None
+    
+    results[step_num] = {"status": status_code, "pass": status_code == expected_status, "data": data}
+    return data
 
 def run_all_steps():
     print("=" * 60)
-    print("BhashaSetu AI - Complete E2E Integration Test")
+    print("BhashaSetu AI - Complete E2E Integration Test (Django)")
     print("=" * 60)
 
     # Step 1: Health Check

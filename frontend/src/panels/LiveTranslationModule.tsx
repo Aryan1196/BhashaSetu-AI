@@ -382,16 +382,15 @@ export const LiveTranslationModule: React.FC = () => {
     }
   };
 
-  // Speaker / Synthesize Handler
   const handlePlayAudio = async () => {
     if (!translatedText.trim()) return;
     setIsSpeakingAudio(true);
     
     try {
-      await apiClient.synthesizeSpeech(translatedText, currentLesson.targetLang);
-      speakText(translatedText);
+      const res = await apiClient.synthesizeSpeech(translatedText, currentLesson.targetLang || 'Odia');
+      speakText(translatedText, res?.audio_url || currentLesson.targetLang || 'Odia', currentLesson.targetLang || 'Odia');
     } catch (e) {
-      speakText(translatedText);
+      speakText(translatedText, currentLesson.targetLang || 'Odia');
     }
     
     setTimeout(() => setIsSpeakingAudio(false), 3500);
@@ -619,8 +618,6 @@ export const LiveTranslationModule: React.FC = () => {
             >
               <option value="Odia">Target: Odia (ଓଡ଼ିଆ)</option>
               <option value="Hindi">Target: Hindi (हिंदी)</option>
-              <option value="Santhali">Target: Santhali (ᱥᱟᱱᱛᱟᱲᱤ)</option>
-              <option value="Bengali">Target: Bengali (বাংলা)</option>
               <option value="English">Target: English</option>
             </select>
           </div>
