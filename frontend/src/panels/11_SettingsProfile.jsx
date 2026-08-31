@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { User, Mail, Building, Save, Shield, Globe, Bell, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Mail, Building, Save, Shield, Globe, Bell, CheckCircle2, Key, Radio, Sparkles } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { apiClient } from '../api/client';
 
 export const SettingsProfile = () => {
   const { userProfile, setUserProfile, showToast } = useApp();
@@ -12,6 +13,15 @@ export const SettingsProfile = () => {
     school: userProfile.school || 'Government Primary School'
   });
 
+  const [deepgramKey, setDeepgramKey] = useState('');
+  const [keySaveMsg, setKeySaveMsg] = useState('');
+
+  useEffect(() => {
+    apiClient.getDeepgramKey().then((key) => {
+      if (key) setDeepgramKey(key);
+    });
+  }, []);
+
   const handleUpdate = (e) => {
     e.preventDefault();
     setUserProfile({
@@ -21,23 +31,31 @@ export const SettingsProfile = () => {
     showToast('Profile updated successfully!');
   };
 
+  const handleSaveKey = async (e) => {
+    e.preventDefault();
+    await apiClient.saveDeepgramKey(deepgramKey);
+    setKeySaveMsg('Deepgram API Key saved successfully! 🎉');
+    showToast('Deepgram key updated.');
+    setTimeout(() => setKeySaveMsg(''), 3000);
+  };
+
   return (
     <div className="max-w-4xl mx-auto py-8 px-6 space-y-8">
       {/* Title Header */}
       <div className="border-b border-slate-800 pb-4">
         <h1 className="text-2xl font-bold text-white font-outfit">Settings</h1>
-        <p className="text-xs text-slate-400">Manage your profile, primary school preferences, and language options</p>
+        <p className="text-xs text-slate-400">Manage your profile, primary school preferences, and AI provider API keys</p>
       </div>
 
       {/* Tabs */}
       <div className="flex space-x-2 border-b border-slate-800 pb-1">
-        {['Profile', 'Preferences', 'Languages', 'Notifications'].map((tab) => (
+        {['Profile', 'API Keys', 'Preferences', 'Languages', 'Notifications'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
               activeTab === tab
-                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
@@ -133,7 +151,58 @@ export const SettingsProfile = () => {
         </form>
       )}
 
-      {activeTab !== 'Profile' && (
+      {/* API Keys Tab */}
+      {activeTab === 'API Keys' && (
+        <form onSubmit={handleSaveKey} className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-xl space-y-6">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h2 className="text-base font-bold text-white font-outfit">AI Speech & Language Providers</h2>
+              <p className="text-xs text-slate-400">Configure credentials for real-time live streaming speech recognition</p>
+            </div>
+            <span className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold font-mono">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+              <span>Deepgram Nova-2 Active</span>
+            </span>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
+                <Key className="w-3.5 h-3.5 text-amber-400" />
+                <span>Deepgram Live Streaming STT Key</span>
+              </label>
+              <input
+                type="text"
+                value={deepgramKey}
+                onChange={(e) => setDeepgramKey(e.target.value)}
+                placeholder="23dae82420be843b3b183028b35162dfca167b8c"
+                className="w-full bg-slate-950 border border-slate-800 text-amber-300 rounded-xl px-4 py-3 text-xs font-mono outline-none focus:border-amber-500 font-medium"
+              />
+              <p className="text-[11px] text-slate-500 mt-1">
+                Used for instant WebSocket streaming from the classroom microphone directly to Deepgram Nova-2.
+              </p>
+            </div>
+
+            {keySaveMsg && (
+              <p className="text-xs text-emerald-400 font-bold bg-emerald-950/60 p-3 rounded-xl border border-emerald-800/50">
+                {keySaveMsg}
+              </p>
+            )}
+          </div>
+
+          <div className="pt-2">
+            <button
+              type="submit"
+              className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-600/30 flex items-center space-x-2 transition-all cursor-pointer"
+            >
+              <Save className="w-4 h-4" />
+              <span>Save & Apply Key</span>
+            </button>
+          </div>
+        </form>
+      )}
+
+      {activeTab !== 'Profile' && activeTab !== 'API Keys' && (
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center text-slate-400 space-y-3">
           <Globe className="w-10 h-10 text-emerald-400 mx-auto" />
           <h3 className="text-base font-bold text-white font-outfit">{activeTab} Settings</h3>
@@ -143,3 +212,4 @@ export const SettingsProfile = () => {
     </div>
   );
 };
+

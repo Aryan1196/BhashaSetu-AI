@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { apiClient } from '../api/client';
 
 const AppContext = createContext();
 
@@ -10,8 +11,9 @@ export const initialDocuments = [
 ];
 
 export const AppProvider = ({ children }) => {
-  const [activePanel, setActivePanel] = useState(1); // 1 to 11
-  const [userRole, setUserRole] = useState('Teacher'); // 'Teacher' or 'Student'
+  const [activePanel, setActivePanel] = useState(1);
+  const [userRole, setUserRole] = useState('Teacher');
+  const [backendStatus, setBackendStatus] = useState('Checking...');
   
   const [currentLesson, setCurrentLesson] = useState({
     grade: 'Class 3',
@@ -20,6 +22,16 @@ export const AppProvider = ({ children }) => {
     sourceLang: 'English',
     targetLang: 'Odia'
   });
+
+  // Translation result that flows between modules
+  const [translationResult, setTranslationResult] = useState(null);
+
+  // Quiz state that flows between QuizScreen and QuizResult
+  const [quizData, setQuizData] = useState(null);
+  const [quizResult, setQuizResult] = useState(null);
+
+  // Pedagogical adaptation result from backend
+  const [pedagogyResult, setPedagogyResult] = useState(null);
 
   const [userProfile, setUserProfile] = useState({
     name: 'Teacher',
@@ -33,9 +45,79 @@ export const AppProvider = ({ children }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
 
+  // Check backend health on mount
+  useEffect(() => {
+    apiClient.getHealth().then((res) => {
+      setBackendStatus(res.status === 'online' || res.status === 'ok' ? 'Backend Live (FastAPI)' : 'Offline (Fallback Mode)');
+    });
+  }, []);
+
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  // Full pipeline: STT -> Translation -> Pedagogy -> RAG
+  const processTranslation = async (text) => {
+    const res = await apiClient.translate({
+      text,
+      source_lang: currentLesson.sourceLang,
+      target_lang: currentLesson.targetLang,
+      grade: currentLesson.grade,
+      subject: currentLesson.subject,
+      topic: currentLesson.topic
+    });
+
+    setTranslationResult({
+      directTranslation: res.direct_translation,
+      pedagogicalAdaptation: res.pedagogical_adaptation,
+      keyPoints: res.key_points,
+      ragSource: res.rag_source
+    });
+
+    return res;
+  };
+
+  // Fetch pedagogical explanation from backend
+  const fetchPedagogy = async (text) => {
+    try {
+      const gradeNum = parseInt(currentLesson.grade.replace('Class', '').trim()) || 3;
+      const res = await apiClient.pedagogyExplain(text, gradeNum, currentLesson.subject, currentLesson.targetLang);
+      setPedagogyResult(res);
+      return res;
+    } catch (err) {
+      console.error('Pedagogy fetch failed:', err);
+      return null;
+    }
+  };
+
+  // Generate quiz from backend
+  const generateQuiz = async () => {
+    try {
+      const res = await apiClient.generateQuiz(
+        currentLesson.topic,
+        currentLesson.grade,
+        currentLesson.subject,
+        currentLesson.targetLang
+      );
+      setQuizData(res);
+      return res;
+    } catch (err) {
+      console.error('Quiz generation failed:', err);
+      return null;
+    }
+  };
+
+  // Evaluate quiz answers via backend
+  const evaluateQuiz = async (quizId, answers) => {
+    try {
+      const res = await apiClient.evaluateQuiz(quizId, answers);
+      setQuizResult(res);
+      return res;
+    } catch (err) {
+      console.error('Quiz evaluation failed:', err);
+      return null;
+    }
   };
 
   const speakText = (text) => {
@@ -59,8 +141,21 @@ export const AppProvider = ({ children }) => {
         setActivePanel,
         userRole,
         setUserRole,
+        backendStatus,
         currentLesson,
         setCurrentLesson,
+        translationResult,
+        setTranslationResult,
+        processTranslation,
+        pedagogyResult,
+        setPedagogyResult,
+        fetchPedagogy,
+        quizData,
+        setQuizData,
+        quizResult,
+        setQuizResult,
+        generateQuiz,
+        evaluateQuiz,
         userProfile,
         setUserProfile,
         documents,
