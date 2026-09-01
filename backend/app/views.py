@@ -414,3 +414,61 @@ def get_analytics_view(request):
             }
         ]
     })
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def lessons_view(request):
+    if request.method == 'GET':
+        lessons = LessonRecord.objects.all().order_by('-created_at')
+        if not lessons.exists():
+            defaults = [
+                {"title": "Water Cycle", "subject": "Science", "grade": "Class 3", "source_lang": "English", "target_lang": "Odia"},
+                {"title": "Plants and Their Parts", "subject": "Science", "grade": "Class 3", "source_lang": "English", "target_lang": "Odia"},
+                {"title": "Animals Around Us", "subject": "Science", "grade": "Class 3", "source_lang": "English", "target_lang": "Odia"},
+                {"title": "Our Environment", "subject": "Science", "grade": "Class 3", "source_lang": "English", "target_lang": "Odia"}
+            ]
+            for item in defaults:
+                LessonRecord.objects.create(**item)
+            lessons = LessonRecord.objects.all().order_by('-created_at')
+        res = []
+        for l in lessons:
+            res.append({
+                "id": l.id,
+                "title": l.title,
+                "topic": l.subject,
+                "grade": l.grade,
+                "subject": l.subject,
+                "source": l.source_lang,
+                "target": l.target_lang,
+                "source_lang": l.source_lang,
+                "target_lang": l.target_lang,
+                "date": l.created_at.strftime("%d %b %Y") if l.created_at else "Today"
+            })
+        return Response(res)
+    elif request.method == 'POST':
+        data = request.data or {}
+        title = data.get("topic") or data.get("title") or "Lesson"
+        grade = data.get("grade", "Class 3")
+        subject = data.get("subject", "Science")
+        source_lang = data.get("source_lang") or data.get("source") or "English"
+        target_lang = data.get("target_lang") or data.get("target") or "Odia"
+        lesson = LessonRecord.objects.create(
+            title=title,
+            grade=grade,
+            subject=subject,
+            source_lang=source_lang,
+            target_lang=target_lang
+        )
+        return Response({
+            "id": lesson.id,
+            "title": lesson.title,
+            "topic": lesson.subject,
+            "grade": lesson.grade,
+            "subject": lesson.subject,
+            "source": lesson.source_lang,
+            "target": lesson.target_lang,
+            "source_lang": lesson.source_lang,
+            "target_lang": lesson.target_lang,
+            "date": lesson.created_at.strftime("%d %b %Y") if lesson.created_at else "Today"
+        }, status=status.HTTP_201_CREATED)
+

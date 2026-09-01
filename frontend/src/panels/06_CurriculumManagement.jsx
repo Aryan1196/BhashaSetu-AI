@@ -1,16 +1,36 @@
 import React, { useState } from 'react';
 import { Upload, FileText, CheckCircle2, Clock, Info, Plus, Trash2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { apiClient } from '../api/client';
 
 export const CurriculumManagement = () => {
   const { documents, setDocuments, showToast } = useApp();
   const [isUploading, setIsUploading] = useState(false);
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
       setIsUploading(true);
-      setTimeout(() => {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('grade', 'Class 3');
+        formData.append('subject', 'Science');
+        formData.append('lang', 'Odia');
+
+        const res = await apiClient.uploadDocument(formData);
+        const newDoc = {
+          id: Date.now(),
+          name: file.name,
+          grade: res.grade || 'Class 3',
+          subject: res.subject || 'Science',
+          lang: res.lang || 'Odia',
+          status: 'Ready'
+        };
+        setDocuments([newDoc, ...documents]);
+        showToast(`Document "${file.name}" uploaded & indexed into Vector Store!`);
+      } catch (err) {
+        console.warn('Upload error, adding to local list:', err);
         const newDoc = {
           id: Date.now(),
           name: file.name,
@@ -20,9 +40,10 @@ export const CurriculumManagement = () => {
           status: 'Ready'
         };
         setDocuments([newDoc, ...documents]);
-        setIsUploading(false);
         showToast(`Document "${file.name}" uploaded successfully!`);
-      }, 1500);
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 

@@ -15,13 +15,72 @@ export const AppProvider = ({ children }) => {
   const [userRole, setUserRole] = useState('Teacher');
   const [backendStatus, setBackendStatus] = useState('Checking...');
   
-  const [currentLesson, setCurrentLesson] = useState({
-    grade: 'Class 3',
-    subject: 'Science',
-    topic: 'Water Cycle',
-    sourceLang: 'English',
-    targetLang: 'Odia'
+  const [currentLesson, setCurrentLessonState] = useState(() => {
+    const saved = localStorage.getItem('bhashasetu_current_lesson');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && (parsed.topic || parsed.grade || parsed.subject)) {
+          return parsed;
+        }
+      } catch (e) {}
+    }
+    return {
+      grade: '',
+      subject: '',
+      topic: '',
+      sourceLang: 'English',
+      targetLang: 'Odia'
+    };
   });
+
+  const setCurrentLesson = (newLesson) => {
+    setCurrentLessonState(newLesson);
+    try {
+      localStorage.setItem('bhashasetu_current_lesson', JSON.stringify(newLesson));
+    } catch (e) {}
+  };
+
+  const [recentLessons, setRecentLessons] = useState([]);
+
+  const loadLessons = async () => {
+    try {
+      const data = await apiClient.getLessons();
+      if (data && Array.isArray(data) && data.length > 0) {
+        setRecentLessons(data);
+      }
+    } catch (err) {
+      console.warn("Failed to load lessons from backend:", err);
+    }
+  };
+
+  const saveLesson = async (lessonData) => {
+    try {
+      const topicTitle = (lessonData.topic || lessonData.title || '').trim() ||
+        `${lessonData.subject || 'Science'} Lesson`;
+      const created = await apiClient.createLesson({
+        topic: topicTitle,
+        title: topicTitle,
+        grade: lessonData.grade || 'Class 3',
+        subject: lessonData.subject || 'Science',
+        source_lang: lessonData.sourceLang || lessonData.source || 'English',
+        target_lang: lessonData.targetLang || lessonData.target || 'Odia'
+      });
+      setRecentLessons((prev) => [created, ...prev]);
+      const updatedLesson = {
+        grade: created.grade || lessonData.grade || 'Class 3',
+        subject: created.subject || lessonData.subject || 'Science',
+        topic: created.title || topicTitle,
+        sourceLang: created.source_lang || lessonData.sourceLang || 'English',
+        targetLang: created.target_lang || lessonData.targetLang || 'Odia'
+      };
+      setCurrentLesson(updatedLesson);
+      return created;
+    } catch (err) {
+      console.warn("Failed to save lesson:", err);
+      return null;
+    }
+  };
 
   // Translation result that flows between modules
   const [translationResult, setTranslationResult] = useState(null);
@@ -69,11 +128,12 @@ export const AppProvider = ({ children }) => {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   };
 
-  // Check backend health on mount
+  // Check backend health and load lessons on mount
   useEffect(() => {
     apiClient.getHealth().then((res) => {
       setBackendStatus(res.status === 'online' || res.status === 'ok' ? 'Backend Live (Django)' : 'Offline (Fallback Mode)');
     });
+    loadLessons();
   }, []);
 
   const showToast = (msg) => {
@@ -237,6 +297,10 @@ export const AppProvider = ({ children }) => {
         backendStatus,
         currentLesson,
         setCurrentLesson,
+        recentLessons,
+        setRecentLessons,
+        loadLessons,
+        saveLesson,
         translationResult,
         setTranslationResult,
         processTranslation,

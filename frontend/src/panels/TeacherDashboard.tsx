@@ -7,20 +7,23 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 
 export const TeacherDashboard: React.FC = () => {
-  const { setActivePanel, currentLesson, setCurrentLesson, userProfile } = useApp();
+  const { setActivePanel, setCurrentLesson, userProfile, recentLessons, saveLesson } = useApp();
   const navigate = useNavigate();
 
-  const handleStartLiveTranslation = () => {
+  const [quickForm, setQuickForm] = React.useState({
+    grade: '',
+    subject: '',
+    topic: '',
+    sourceLang: 'English',
+    targetLang: 'Odia'
+  });
+
+  const handleStartLiveTranslation = async () => {
+    setCurrentLesson(quickForm);
+    await saveLesson(quickForm);
     setActivePanel(4);
     navigate('/teacher/live');
   };
-
-  const recentLessons = [
-    { id: 1, title: 'Water Cycle', topic: 'Science', grade: 'Class 3', source: 'English', target: 'Odia', date: '20 May 2025' },
-    { id: 2, title: 'Plants', topic: 'Science', grade: 'Class 3', source: 'English', target: 'Odia', date: '18 May 2025' },
-    { id: 3, title: 'Animals', topic: 'Science', grade: 'Class 3', source: 'English', target: 'Odia', date: '16 May 2025' },
-    { id: 4, title: 'Our Environment', topic: 'Science', grade: 'Class 3', source: 'English', target: 'Odia', date: '14 May 2025' },
-  ];
 
   return (
     <div className="max-w-6xl mx-auto py-6 px-4 sm:px-6 space-y-8">
@@ -54,36 +57,52 @@ export const TeacherDashboard: React.FC = () => {
           <span className="text-[11px] text-slate-500 font-mono">* Demo metrics for hackathon MVP</span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <Card className="p-5 text-center">
-            <div className="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center mx-auto mb-2 border border-blue-500/30">
-              <BookOpen className="w-5 h-5" />
+          {/* Card 1 */}
+          <Card className="p-4 flex flex-col justify-between space-y-2 hover:border-slate-700 transition-colors">
+            <div className="flex items-center justify-between">
+              <span className="text-2xl">📚</span>
+              <Badge variant="blue">Active</Badge>
             </div>
-            <p className="text-3xl font-extrabold text-white font-outfit">12</p>
-            <p className="text-xs font-semibold text-slate-400 mt-1">Lessons</p>
+            <div>
+              <p className="text-2xl font-bold text-white font-outfit">{recentLessons.length || 3}</p>
+              <p className="text-xs font-semibold text-slate-400 mt-1">Lessons Taught</p>
+            </div>
           </Card>
 
-          <Card className="p-5 text-center">
-            <div className="w-10 h-10 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center mx-auto mb-2 border border-teal-500/30">
-              <Users className="w-5 h-5" />
+          {/* Card 2 */}
+          <Card className="p-4 flex flex-col justify-between space-y-2 hover:border-slate-700 transition-colors">
+            <div className="flex items-center justify-between">
+              <span className="text-2xl">🏫</span>
+              <Badge variant="teal">Class 3</Badge>
             </div>
-            <p className="text-3xl font-extrabold text-teal-400 font-outfit">35</p>
-            <p className="text-xs font-semibold text-slate-400 mt-1">Students</p>
+            <div>
+              <p className="text-2xl font-bold text-white font-outfit">42</p>
+              <p className="text-xs font-semibold text-slate-400 mt-1">Students Enrolled</p>
+            </div>
           </Card>
 
-          <Card className="p-5 text-center">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center mx-auto mb-2 border border-purple-500/30">
-              <Languages className="w-5 h-5" />
+          {/* Card 3 */}
+          <Card className="p-4 flex flex-col justify-between space-y-2 hover:border-slate-700 transition-colors">
+            <div className="flex items-center justify-between">
+              <span className="text-2xl">🌐</span>
+              <Badge variant="emerald">94% Accuracy</Badge>
             </div>
-            <p className="text-3xl font-extrabold text-purple-400 font-outfit">4</p>
-            <p className="text-xs font-semibold text-slate-400 mt-1">Languages</p>
+            <div>
+              <p className="text-2xl font-bold text-white font-outfit">Odia</p>
+              <p className="text-xs font-semibold text-slate-400 mt-1">Target Language</p>
+            </div>
           </Card>
 
-          <Card className="p-5 text-center">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto mb-2 border border-amber-500/30">
-              <Award className="w-5 h-5" />
+          {/* Card 4 */}
+          <Card className="p-4 flex flex-col justify-between space-y-2 hover:border-slate-700 transition-colors">
+            <div className="flex items-center justify-between">
+              <span className="text-2xl">📝</span>
+              <Badge variant="amber">3 Today</Badge>
             </div>
-            <p className="text-3xl font-extrabold text-amber-400 font-outfit">8</p>
-            <p className="text-xs font-semibold text-slate-400 mt-1">Assessments</p>
+            <div>
+              <p className="text-2xl font-bold text-white font-outfit">12</p>
+              <p className="text-xs font-semibold text-slate-400 mt-1">Assessments</p>
+            </div>
           </Card>
         </div>
       </div>
@@ -108,10 +127,11 @@ export const TeacherDashboard: React.FC = () => {
               <div>
                 <label className="block text-slate-300 font-semibold mb-1.5">Grade</label>
                 <select
-                  value={currentLesson.grade}
-                  onChange={(e) => setCurrentLesson({ ...currentLesson, grade: e.target.value })}
+                  value={quickForm.grade}
+                  onChange={(e) => setQuickForm({ ...quickForm, grade: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl p-3.5 font-medium outline-none focus:border-blue-500"
                 >
+                  <option value="">-- Select Grade --</option>
                   <option value="Class 1">Class 1</option>
                   <option value="Class 2">Class 2</option>
                   <option value="Class 3">Class 3</option>
@@ -124,10 +144,11 @@ export const TeacherDashboard: React.FC = () => {
               <div>
                 <label className="block text-slate-300 font-semibold mb-1.5">Subject</label>
                 <select
-                  value={currentLesson.subject}
-                  onChange={(e) => setCurrentLesson({ ...currentLesson, subject: e.target.value })}
+                  value={quickForm.subject}
+                  onChange={(e) => setQuickForm({ ...quickForm, subject: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl p-3.5 font-medium outline-none focus:border-blue-500"
                 >
+                  <option value="">-- Select Subject --</option>
                   <option value="Science">Science</option>
                   <option value="Mathematics">Mathematics</option>
                   <option value="Environmental Studies">Environmental Studies</option>
@@ -135,13 +156,25 @@ export const TeacherDashboard: React.FC = () => {
                 </select>
               </div>
 
+              {/* Topic */}
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1.5">Topic (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Photosynthesis, Solar System..."
+                  value={quickForm.topic}
+                  onChange={(e) => setQuickForm({ ...quickForm, topic: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl p-3.5 font-medium outline-none focus:border-blue-500"
+                />
+              </div>
+
               {/* Source & Target Language */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-300 font-semibold mb-1.5">Source Language</label>
                   <select
-                    value={currentLesson.sourceLang}
-                    onChange={(e) => setCurrentLesson({ ...currentLesson, sourceLang: e.target.value })}
+                    value={quickForm.sourceLang}
+                    onChange={(e) => setQuickForm({ ...quickForm, sourceLang: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl p-3.5 font-medium outline-none focus:border-blue-500"
                   >
                     <option value="English">English</option>
@@ -151,8 +184,8 @@ export const TeacherDashboard: React.FC = () => {
                 <div>
                   <label className="block text-slate-300 font-semibold mb-1.5">Target Language</label>
                   <select
-                    value={currentLesson.targetLang}
-                    onChange={(e) => setCurrentLesson({ ...currentLesson, targetLang: e.target.value })}
+                    value={quickForm.targetLang}
+                    onChange={(e) => setQuickForm({ ...quickForm, targetLang: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 text-teal-400 font-bold rounded-xl p-3.5 outline-none focus:border-teal-500"
                   >
                     <option value="Odia">Odia (ଓଡ଼ିଆ)</option>
@@ -193,7 +226,7 @@ export const TeacherDashboard: React.FC = () => {
             </div>
 
             <div className="space-y-3">
-              {recentLessons.map((lesson) => (
+              {recentLessons.map((lesson: any) => (
                 <div
                   key={lesson.id}
                   onClick={() => { setActivePanel(5); navigate('/pedagogy'); }}

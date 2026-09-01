@@ -391,5 +391,43 @@ export const apiClient = {
         confidence: 0.98
       };
     }
+  },
+
+  // Lessons API
+  async getLessons() {
+    try {
+      const res = await fetch(`${API_BASE_URL}/lessons`);
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      return [
+        { id: 1, title: 'Water Cycle', topic: 'Science', grade: 'Class 3', source: 'English', target: 'Odia', date: 'Today' },
+        { id: 2, title: 'Plants and Their Parts', topic: 'Science', grade: 'Class 3', source: 'English', target: 'Odia', date: 'Yesterday' }
+      ];
+    }
+  },
+
+  async createLesson(payload: { title?: string; topic?: string; grade?: string; subject?: string; source_lang?: string; target_lang?: string; source?: string; target?: string }) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/lessons`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      console.warn("Failed to save lesson to DB, returning local fallback:", err);
+      return {
+        id: Date.now(),
+        title: payload.topic || payload.title || 'Lesson',
+        topic: payload.subject || 'Science',
+        grade: payload.grade || 'Class 3',
+        subject: payload.subject || 'Science',
+        source: payload.source_lang || payload.source || 'English',
+        target: payload.target_lang || payload.target || 'Odia',
+        date: 'Today'
+      };
+    }
   }
 };

@@ -17,13 +17,18 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 
 export const StudentDashboard: React.FC = () => {
-  const { setActivePanel, currentLesson } = useApp();
+  const { setActivePanel, currentLesson, recentLessons } = useApp();
   const navigate = useNavigate();
 
   const handleNavigate = (path: string, panelNum: number) => {
     setActivePanel(panelNum);
     navigate(path);
   };
+
+  const activeTopic = currentLesson?.topic || (recentLessons && recentLessons[0] ? (recentLessons[0].title || recentLessons[0].topic) : 'Water Cycle');
+  const activeGrade = currentLesson?.grade || (recentLessons && recentLessons[0] ? recentLessons[0].grade : 'Class 3');
+  const activeSubject = currentLesson?.subject || (recentLessons && recentLessons[0] ? recentLessons[0].subject : 'Science');
+  const activeTargetLang = currentLesson?.targetLang || (recentLessons && recentLessons[0] ? (recentLessons[0].target_lang || recentLessons[0].target) : 'Odia');
 
   const recentScores = [
     { id: 1, topic: 'Water Cycle (ପାଣି ଚକ୍ର)', score: '3/3', percentage: 100, date: 'Today' },
@@ -38,7 +43,7 @@ export const StudentDashboard: React.FC = () => {
         <div className="space-y-2 z-10">
           <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-teal-500/20 text-teal-400 border border-teal-500/30 text-xs font-semibold">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Vernacular Student Hub • Class 3</span>
+            <span>Vernacular Student Hub • {activeGrade}</span>
           </div>
           <h1 className="text-3xl md:text-4xl font-extrabold text-white font-outfit tracking-tight">
             Welcome to BhashaSetu AI 🎓
@@ -61,14 +66,14 @@ export const StudentDashboard: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 rounded-2xl bg-teal-500/20 text-teal-400 flex items-center justify-center font-bold text-2xl border border-teal-500/30">
-              🌊
+              📖
             </div>
             <div>
               <Badge variant="teal">Current Lesson</Badge>
               <h2 className="text-xl font-bold text-white font-outfit mt-1">
-                {currentLesson.topic} ({currentLesson.grade} • {currentLesson.subject})
+                {activeTopic} ({activeGrade} • {activeSubject})
               </h2>
-              <p className="text-xs text-slate-400">Target Language: <strong className="text-teal-400">Odia (ଓଡ଼ିଆ)</strong></p>
+              <p className="text-xs text-slate-400">Target Language: <strong className="text-teal-400">{activeTargetLang}</strong></p>
             </div>
           </div>
 

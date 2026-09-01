@@ -12,18 +12,21 @@ import {
 import { useApp } from '../context/AppContext';
 
 export const TeacherDashboard = () => {
-  const { setActivePanel, currentLesson, setCurrentLesson, userProfile } = useApp();
+  const { setActivePanel, setCurrentLesson, userProfile, recentLessons, saveLesson } = useApp();
 
-  const handleStartLiveTranslation = () => {
+  const [quickForm, setQuickForm] = React.useState({
+    grade: '',
+    subject: '',
+    topic: '',
+    sourceLang: 'English',
+    targetLang: 'Odia'
+  });
+
+  const handleStartLiveTranslation = async () => {
+    setCurrentLesson(quickForm);
+    await saveLesson(quickForm);
     setActivePanel(4); // Jump to Panel 4: Live Translation
   };
-
-  const recentLessons = [
-    { id: 1, title: 'Water Cycle', topic: 'Science', grade: 'Class 3', source: 'English', target: 'Odia', date: '20 May 2025' },
-    { id: 2, title: 'Plants and Their Parts', topic: 'Science', grade: 'Class 3', source: 'English', target: 'Odia', date: '18 May 2025' },
-    { id: 3, title: 'Animals Around Us', topic: 'Science', grade: 'Class 3', source: 'English', target: 'Odia', date: '16 May 2025' },
-    { id: 4, title: 'Our Environment', topic: 'Science', grade: 'Class 3', source: 'English', target: 'Odia', date: '14 May 2025' },
-  ];
 
   return (
     <div className="max-w-6xl mx-auto py-8 px-6 space-y-8">
@@ -64,10 +67,11 @@ export const TeacherDashboard = () => {
             <div>
               <label className="block text-slate-400 font-medium mb-1.5">Grade</label>
               <select
-                value={currentLesson.grade}
-                onChange={(e) => setCurrentLesson({ ...currentLesson, grade: e.target.value })}
+                value={quickForm.grade}
+                onChange={(e) => setQuickForm({ ...quickForm, grade: e.target.value })}
                 className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl p-3 outline-none focus:border-emerald-500 font-medium"
               >
+                <option value="">-- Select Grade --</option>
                 <option value="Class 1">Class 1</option>
                 <option value="Class 2">Class 2</option>
                 <option value="Class 3">Class 3</option>
@@ -80,10 +84,11 @@ export const TeacherDashboard = () => {
             <div>
               <label className="block text-slate-400 font-medium mb-1.5">Subject</label>
               <select
-                value={currentLesson.subject}
-                onChange={(e) => setCurrentLesson({ ...currentLesson, subject: e.target.value })}
+                value={quickForm.subject}
+                onChange={(e) => setQuickForm({ ...quickForm, subject: e.target.value })}
                 className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl p-3 outline-none focus:border-emerald-500 font-medium"
               >
+                <option value="">-- Select Subject --</option>
                 <option value="Science">Science</option>
                 <option value="Mathematics">Mathematics</option>
                 <option value="Environmental Studies">Environmental Studies</option>
@@ -91,13 +96,25 @@ export const TeacherDashboard = () => {
               </select>
             </div>
 
+            {/* Topic Input */}
+            <div>
+              <label className="block text-slate-400 font-medium mb-1.5">Topic (Optional)</label>
+              <input
+                type="text"
+                placeholder="e.g. Photosynthesis, Solar System..."
+                value={quickForm.topic}
+                onChange={(e) => setQuickForm({ ...quickForm, topic: e.target.value })}
+                className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl p-3 outline-none focus:border-emerald-500 font-medium"
+              />
+            </div>
+
             {/* Source & Target Language */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-slate-400 font-medium mb-1.5">Source Language</label>
                 <select
-                  value={currentLesson.sourceLang}
-                  onChange={(e) => setCurrentLesson({ ...currentLesson, sourceLang: e.target.value })}
+                  value={quickForm.sourceLang}
+                  onChange={(e) => setQuickForm({ ...quickForm, sourceLang: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl p-3 outline-none focus:border-emerald-500 font-medium"
                 >
                   <option value="English">English</option>
@@ -108,8 +125,8 @@ export const TeacherDashboard = () => {
               <div>
                 <label className="block text-slate-400 font-medium mb-1.5">Target Language</label>
                 <select
-                  value={currentLesson.targetLang}
-                  onChange={(e) => setCurrentLesson({ ...currentLesson, targetLang: e.target.value })}
+                  value={quickForm.targetLang}
+                  onChange={(e) => setQuickForm({ ...quickForm, targetLang: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-800 text-emerald-400 rounded-xl p-3 outline-none focus:border-emerald-500 font-bold"
                 >
                   <option value="Odia">Odia (ଓଡ଼ିଆ)</option>

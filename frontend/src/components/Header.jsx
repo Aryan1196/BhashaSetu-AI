@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, Globe, Sparkles, ChevronRight, Sun, Moon } from 'lucide-react';
+import { Globe, Sparkles, ChevronRight, Sun, Moon } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export const Header = () => {
@@ -57,12 +57,6 @@ export const Header = () => {
           ) : (
             <Moon className="w-4 h-4 text-indigo-600 hover:-rotate-12 transition-transform" />
           )}
-        </button>
-
-        {/* Notification Bell */}
-        <button className="relative p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 transition-colors">
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-emerald-500 rounded-full"></span>
         </button>
       </div>
 
