@@ -113,32 +113,27 @@ export const AppProvider = ({ children }) => {
     gradeSubject: 'Class 3 - Science'
   });
 
-  const [theme, setTheme] = useState(() => {
-    const saved = localStorage.getItem('bhashasetu_theme');
-    return saved === 'light' ? 'light' : 'dark';
-  });
+  const [theme, setTheme] = useState('light');
 
   const [documents, setDocuments] = useState(initialDocuments);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
 
-  // Synchronize theme to document element and localStorage
+  // Synchronize theme to document element and localStorage (Permanently Light Mode)
   useEffect(() => {
-    localStorage.setItem('bhashasetu_theme', theme);
+    localStorage.setItem('bhashasetu_theme', 'light');
     const root = document.documentElement;
-    if (theme === 'light') {
-      root.classList.remove('dark');
-      root.classList.add('light');
-      root.setAttribute('data-theme', 'light');
-    } else {
-      root.classList.remove('light');
-      root.classList.add('dark');
-      root.setAttribute('data-theme', 'dark');
+    root.classList.remove('dark');
+    root.classList.add('light');
+    root.setAttribute('data-theme', 'light');
+    if (document.body) {
+      document.body.classList.remove('dark');
+      document.body.classList.add('light');
     }
-  }, [theme]);
+  }, []);
 
   const toggleTheme = () => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+    // Light mode locked by default
   };
 
   // Check backend health and load lessons on mount

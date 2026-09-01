@@ -210,76 +210,27 @@ export const SettingsProfile = () => {
               <Palette className="w-4 h-4 text-blue-400" />
               <span>Appearance & Theme</span>
             </h2>
-            <p className="text-xs text-slate-400">Choose your preferred visual theme for classroom presentations and daily usage</p>
+            <p className="text-xs text-slate-400">Default visual presentation mode for classrooms and educational devices</p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Dark Mode Card */}
-            <div
-              onClick={() => {
-                setTheme('dark');
-                showToast('Dark Mode activated 🌙');
-              }}
-              className={`p-5 rounded-2xl border-2 transition-all cursor-pointer space-y-3 ${
-                theme === 'dark'
-                  ? 'border-blue-500 bg-slate-950/80 shadow-lg shadow-blue-500/10'
-                  : 'border-slate-800 hover:border-slate-700 bg-slate-950/40'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-slate-800 flex items-center justify-center text-amber-400">
-                    <Moon className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-white">Dark Theme</h3>
-                    <p className="text-[11px] text-slate-400">Deep Navy & Slate</p>
-                  </div>
-                </div>
-                {theme === 'dark' && (
-                  <span className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs">
-                    <Check className="w-3.5 h-3.5" />
-                  </span>
-                )}
-              </div>
-              <div className="h-16 rounded-xl bg-[#071120] border border-slate-800 p-2.5 flex flex-col justify-between">
-                <div className="flex items-center space-x-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                  <span className="w-8 h-1.5 rounded-full bg-slate-700"></span>
-                </div>
-                <div className="w-full h-4 rounded-lg bg-slate-800/80"></div>
-              </div>
-            </div>
-
-            {/* Light Mode Card */}
-            <div
-              onClick={() => {
-                setTheme('light');
-                showToast('Light Mode activated ☀️');
-              }}
-              className={`p-5 rounded-2xl border-2 transition-all cursor-pointer space-y-3 ${
-                theme === 'light'
-                  ? 'border-blue-500 bg-slate-100/80 shadow-lg shadow-blue-500/10'
-                  : 'border-slate-800 hover:border-slate-700 bg-slate-950/40'
-              }`}
-            >
+          <div className="max-w-md">
+            {/* Light Mode Permanent Card */}
+            <div className="p-5 rounded-2xl border-2 border-blue-500 bg-slate-100/90 shadow-lg shadow-blue-500/10 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2.5">
                   <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
                     <Sun className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-white">Light Theme</h3>
-                    <p className="text-[11px] text-slate-400">Clean Crisp White</p>
+                    <h3 className="text-sm font-bold text-slate-900">Light Theme (Default)</h3>
+                    <p className="text-[11px] text-slate-600">Clean Crisp White for High Visibility</p>
                   </div>
                 </div>
-                {theme === 'light' && (
-                  <span className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs">
-                    <Check className="w-3.5 h-3.5" />
-                  </span>
-                )}
+                <span className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs">
+                  <Check className="w-3.5 h-3.5" />
+                </span>
               </div>
-              <div className="h-16 rounded-xl bg-slate-100 border border-slate-300 p-2.5 flex flex-col justify-between">
+              <div className="h-16 rounded-xl bg-slate-50 border border-slate-300 p-2.5 flex flex-col justify-between">
                 <div className="flex items-center space-x-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
                   <span className="w-8 h-1.5 rounded-full bg-slate-300"></span>
