@@ -152,7 +152,7 @@ export const TeacherDashboard = () => {
           {/* Overview Grid Cards */}
           <div>
             <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Overview</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center">
                 <p className="text-3xl font-extrabold text-white font-outfit">12</p>
                 <p className="text-xs font-semibold text-slate-400 mt-1">Lessons</p>
@@ -164,10 +164,6 @@ export const TeacherDashboard = () => {
               <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center">
                 <p className="text-3xl font-extrabold text-purple-400 font-outfit">4</p>
                 <p className="text-xs font-semibold text-slate-400 mt-1">Languages</p>
-              </div>
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center">
-                <p className="text-3xl font-extrabold text-amber-400 font-outfit">8</p>
-                <p className="text-xs font-semibold text-slate-400 mt-1">Assessments</p>
               </div>
             </div>
           </div>

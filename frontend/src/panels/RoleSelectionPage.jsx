@@ -80,8 +80,8 @@ export const RoleSelectionPage = () => {
     },
     {
       icon: Layout,
-      title: 'Responsive Dual Theme System',
-      desc: 'Tailored dark and light mode user interface optimized for desktop displays and low-cost primary school devices.',
+      title: 'Light Mode UI',
+      desc: 'Clean light mode user interface optimized for desktop displays and low-cost primary school devices.',
       color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20'
     }
   ];
