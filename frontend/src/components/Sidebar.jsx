@@ -92,36 +92,7 @@ export const Sidebar = () => {
           </div>
         </div>
 
-        {/* Role Mode Switcher Pills */}
-        <div className="p-3 border-b border-slate-800/40 bg-slate-950/60">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">
-            Selected Category
-          </div>
-          <div className="grid grid-cols-2 gap-1 p-1 bg-slate-900 rounded-xl border border-slate-800">
-            <button
-              onClick={() => toggleUserRole('Teacher')}
-              className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1 ${
-                userRole === 'Teacher'
-                  ? 'bg-blue-600 text-white shadow'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <GraduationCap className="w-3.5 h-3.5" />
-              <span>Teacher</span>
-            </button>
-            <button
-              onClick={() => toggleUserRole('Student')}
-              className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1 ${
-                userRole === 'Student'
-                  ? 'bg-teal-600 text-white shadow'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Users className="w-3.5 h-3.5" />
-              <span>Student</span>
-            </button>
-          </div>
-        </div>
+
 
         {/* Navigation List */}
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">

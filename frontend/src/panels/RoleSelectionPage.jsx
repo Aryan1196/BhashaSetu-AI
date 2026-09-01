@@ -26,13 +26,7 @@ export const RoleSelectionPage = () => {
 
   const handleProceed = () => {
     setUserRole(selectedRole);
-    if (selectedRole === 'Teacher') {
-      setActivePanel(2);
-      navigate('/teacher/dashboard');
-    } else {
-      setActivePanel(12);
-      navigate('/student/dashboard');
-    }
+    navigate('/login', { state: { role: selectedRole } });
   };
 
   const softwareCapabilities = [

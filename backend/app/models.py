@@ -38,3 +38,11 @@ class QuizResultRecord(models.Model):
 
     class Meta:
         db_table = "quiz_results"
+
+class Student(models.Model):
+    name = models.CharField(max_length=255)
+    grade = models.CharField(max_length=50, default="Class 3")
+    enrolled_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "students"
