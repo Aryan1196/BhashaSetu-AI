@@ -5,6 +5,7 @@ import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 
 import { RoleSelectionPage } from './panels/RoleSelectionPage';
+import { AuthPage } from './panels/AuthPage';
 import { WelcomeScreen } from './panels/01_WelcomeScreen';
 import { TeacherDashboard } from './panels/TeacherDashboard';
 import { StudentDashboard } from './panels/StudentDashboard';
@@ -18,7 +19,7 @@ function LayoutWrapper() {
   const { activePanel, userRole } = useApp();
   const location = useLocation();
 
-  const isCategorySelectionPage = location.pathname === '/' || location.pathname === '/select-role';
+  const isCategorySelectionPage = location.pathname === '/' || location.pathname === '/login' || location.pathname === '/select-role';
 
   return (
     <div className="flex min-h-screen bg-[#071120] text-slate-100 font-sans">
@@ -34,6 +35,7 @@ function LayoutWrapper() {
           <Routes>
             <Route path="/" element={<RoleSelectionPage />} />
             <Route path="/select-role" element={<RoleSelectionPage />} />
+            <Route path="/login" element={<AuthPage />} />
             <Route path="/welcome" element={<WelcomeScreen />} />
             <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
             <Route path="/student/dashboard" element={<StudentDashboard />} />

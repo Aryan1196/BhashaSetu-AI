@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Play, BookOpen, Users, Languages, Award, ArrowRight, Sparkles } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { apiClient } from '../api/client';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -17,6 +18,16 @@ export const TeacherDashboard: React.FC = () => {
     sourceLang: 'English',
     targetLang: 'Odia'
   });
+
+  const [studentCount, setStudentCount] = React.useState(42);
+
+  React.useEffect(() => {
+    apiClient.getAnalytics().then(data => {
+      if (data && data.total_students !== undefined) {
+        setStudentCount(data.total_students);
+      }
+    });
+  }, []);
 
   const handleStartLiveTranslation = async () => {
     setCurrentLesson(quickForm);
@@ -56,7 +67,7 @@ export const TeacherDashboard: React.FC = () => {
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Quick Overview</h3>
           <span className="text-[11px] text-slate-500 font-mono">* Demo metrics for hackathon MVP</span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           {/* Card 1 */}
           <Card className="p-4 flex flex-col justify-between space-y-2 hover:border-slate-700 transition-colors">
             <div className="flex items-center justify-between">
@@ -76,7 +87,7 @@ export const TeacherDashboard: React.FC = () => {
               <Badge variant="teal">Class 3</Badge>
             </div>
             <div>
-              <p className="text-2xl font-bold text-white font-outfit">42</p>
+              <p className="text-2xl font-bold text-white font-outfit">{studentCount}</p>
               <p className="text-xs font-semibold text-slate-400 mt-1">Students Enrolled</p>
             </div>
           </Card>
@@ -90,18 +101,6 @@ export const TeacherDashboard: React.FC = () => {
             <div>
               <p className="text-2xl font-bold text-white font-outfit">Odia</p>
               <p className="text-xs font-semibold text-slate-400 mt-1">Target Language</p>
-            </div>
-          </Card>
-
-          {/* Card 4 */}
-          <Card className="p-4 flex flex-col justify-between space-y-2 hover:border-slate-700 transition-colors">
-            <div className="flex items-center justify-between">
-              <span className="text-2xl">📝</span>
-              <Badge variant="amber">3 Today</Badge>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white font-outfit">12</p>
-              <p className="text-xs font-semibold text-slate-400 mt-1">Assessments</p>
             </div>
           </Card>
         </div>
