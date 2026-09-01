@@ -12,6 +12,7 @@ class LessonRecord(models.Model):
     key_points = models.JSONField(default=list, blank=True)
     example = models.TextField(default="", blank=True)
     learner_question = models.TextField(default="", blank=True)
+    qa_history = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

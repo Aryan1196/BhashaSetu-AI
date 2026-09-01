@@ -92,6 +92,19 @@ export const AppProvider = ({ children }) => {
   // Pedagogical adaptation result from backend
   const [pedagogyResult, setPedagogyResult] = useState(null);
 
+  // Lesson queries & answers history (stores all live translated queries + student questions for current lesson)
+  const [lessonQAHistory, setLessonQAHistory] = useState([
+    {
+      id: 1,
+      query: "Today we are going to learn about the water cycle.",
+      direct_translation: "ଆଜି ଆମେ ପାଣି ଚକ୍ର ବିଷୟରେ ଶିଖିବାକୁ ଯାଉଛୁ ।",
+      answer: "ସୂର୍ଯ୍ୟଙ୍କ ତାପରେ ପାଣି ଗରମ ହୋଇ ବାଷ୍ପ ପାଲଟିଯାଏ । ଏହାକୁ ଆମେ ବାଷ୍ପୀଭବନ ବୋଲି କୁହାଯାଏ ।",
+      pedagogical_adaptation: "ସୂର୍ଯ୍ୟଙ୍କ ତାପରେ ପାଣି ଗରମ ହୋଇ ବାଷ୍ପ ପାଲଟିଯାଏ । ଏହାକୁ ଆମେ ବାଷ୍ପୀଭବନ ବୋଲି କୁହାଯାଏ ।",
+      key_points: ["ସୂର୍ଯ୍ୟଙ୍କ ତାପ ଯୋଗୁଁ ପାଣି ଗରମ ହୁଏ ।", "ଗରମ ହେଲେ ପାଣି ବାଷ୍ପ ହୋଇ ଉପରକୁ ଉଠିଯାଏ ।"],
+      timestamp: "10:30 AM"
+    }
+  ]);
+
   const [userProfile, setUserProfile] = useState({
     name: 'Teacher',
     email: 'teacher@bhashasetu.ai',
@@ -184,6 +197,18 @@ export const AppProvider = ({ children }) => {
         learner_question: aiData?.follow_up_question || ""
       });
 
+      const newQaItem = {
+        id: Date.now(),
+        query: text,
+        direct_translation: directText,
+        answer: adaptedText,
+        pedagogical_adaptation: adaptedText,
+        key_points: keyPoints,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+
+      setLessonQAHistory(prev => [newQaItem, ...prev]);
+
       // Save to database
       saveLesson({
         topic: currentLesson.topic || `${currentLesson.subject || 'Science'} Lesson`,
@@ -196,7 +221,8 @@ export const AppProvider = ({ children }) => {
         pedagogical_adaptation: adaptedText,
         key_points: keyPoints,
         example: aiData?.example || "",
-        learner_question: aiData?.follow_up_question || ""
+        learner_question: aiData?.follow_up_question || "",
+        qa_history: [newQaItem]
       });
 
       return transData || { direct_translation: directText, pedagogical_adaptation: adaptedText };
@@ -210,6 +236,7 @@ export const AppProvider = ({ children }) => {
   const selectLessonForReview = (lesson) => {
     if (!lesson) return;
     const updatedLesson = {
+      id: lesson.id,
       grade: lesson.grade || 'Class 3',
       subject: lesson.subject || 'Science',
       topic: lesson.title || lesson.topic || 'Lesson',
@@ -238,7 +265,54 @@ export const AppProvider = ({ children }) => {
       learner_question: lesson.learner_question || ''
     });
 
+    const initialQAs = Array.isArray(lesson.qa_history) && lesson.qa_history.length > 0
+      ? lesson.qa_history
+      : [
+          {
+            id: 1,
+            query: lesson.transcript || `What is ${updatedLesson.topic}?`,
+            direct_translation: directTranslation,
+            answer: pedagogicalAdaptation,
+            pedagogical_adaptation: pedagogicalAdaptation,
+            key_points: keyPoints,
+            timestamp: lesson.date || "10:30 AM"
+          },
+          {
+            id: 2,
+            query: `Can you explain the key concepts of ${updatedLesson.topic}?`,
+            direct_translation: `${updatedLesson.topic} ର ମୁଖ୍ୟ ଧାରଣା କ'ଣ ?`,
+            answer: lesson.example || pedagogicalAdaptation,
+            pedagogical_adaptation: lesson.example || pedagogicalAdaptation,
+            key_points: keyPoints,
+            timestamp: lesson.date || "10:35 AM"
+          }
+        ];
+    setLessonQAHistory(initialQAs);
+
     setActivePanel(5);
+  };
+
+  // Ask Question on Specific Lesson (appends query and answered explanation to this lesson's Q&A)
+  const addLessonQuery = async (queryText) => {
+    if (!queryText || !queryText.trim()) return;
+    try {
+      const res = await apiClient.askLessonQuery({
+        query: queryText,
+        lesson_id: currentLesson?.id,
+        grade: currentLesson?.grade || 'Class 3',
+        subject: currentLesson?.subject || 'Science',
+        topic: currentLesson?.topic || 'Lesson',
+        target_lang: currentLesson?.targetLang || 'Odia',
+        source_lang: currentLesson?.sourceLang || 'English'
+      });
+
+      if (res && res.entry) {
+        setLessonQAHistory(prev => [res.entry, ...prev]);
+      }
+      return res;
+    } catch (e) {
+      console.warn("Failed to add lesson query:", e);
+    }
   };
 
   // Fetch pedagogical explanation from backend
@@ -368,6 +442,9 @@ export const AppProvider = ({ children }) => {
         pedagogyResult,
         setPedagogyResult,
         fetchPedagogy,
+        lessonQAHistory,
+        setLessonQAHistory,
+        addLessonQuery,
         quizData,
         setQuizData,
         quizResult,

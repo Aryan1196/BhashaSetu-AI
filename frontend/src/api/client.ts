@@ -447,7 +447,43 @@ export const apiClient = {
         key_points: payload.key_points || [],
         example: payload.example || '',
         learner_question: payload.learner_question || '',
+        qa_history: [],
         date: 'Today'
+      };
+    }
+  },
+
+  // Ask Question on Specific Lesson and store in lesson's Q&A history
+  async askLessonQuery(payload: {
+    query: string;
+    lesson_id?: number | string;
+    grade?: string;
+    subject?: string;
+    topic?: string;
+    target_lang?: string;
+    source_lang?: string;
+  }) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/lessons/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      console.warn("Failed to query lesson:", err);
+      return {
+        entry: {
+          id: Date.now(),
+          query: payload.query,
+          direct_translation: payload.query,
+          answer: "ଏହି ବିଷୟରେ ପାଠ୍ୟକ୍ରମ ଆଧାରିତ ଶିକ୍ଷଣ ବିବରଣୀ ।",
+          pedagogical_adaptation: "ଏହି ବିଷୟରେ ପାଠ୍ୟକ୍ରମ ଆଧାରିତ ଶିକ୍ଷଣ ବିବରଣୀ ।",
+          key_points: ["ମୁଖ୍ୟ ଶିକ୍ଷଣ ବିନ୍ଦୁ"],
+          timestamp: "Just now"
+        },
+        qa_history: []
       };
     }
   }

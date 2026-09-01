@@ -1,5 +1,7 @@
 import os
 import json
+import time
+from datetime import datetime
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -263,20 +265,48 @@ def translate_and_adapt_view(request):
     ped_result = pedagogy_service.adapt(text, grade, subject, tgt)
     rag_res = rag_engine.query(text, grade, subject, tgt)
 
+    new_entry = {
+        "id": int(time.time() * 1000),
+        "query": text,
+        "direct_translation": direct_trans,
+        "answer": ped_result["pedagogical_adaptation"],
+        "pedagogical_adaptation": ped_result["pedagogical_adaptation"],
+        "key_points": ped_result.get("key_points", []),
+        "example": ped_result.get("example", ""),
+        "timestamp": datetime.now().strftime("%I:%M %p")
+    }
+
     try:
-        LessonRecord.objects.create(
+        lesson = LessonRecord.objects.filter(
             title=topic or "Lesson",
             grade=grade,
-            subject=subject,
-            source_lang=src,
-            target_lang=tgt,
-            transcript=text,
-            direct_translation=direct_trans,
-            pedagogical_adaptation=ped_result["pedagogical_adaptation"],
-            key_points=ped_result.get("key_points", []),
-            example=ped_result.get("example", ""),
-            learner_question=ped_result.get("learner_question", "")
-        )
+            subject=subject
+        ).order_by('-created_at').first()
+
+        if lesson:
+            current_qa = lesson.qa_history if isinstance(lesson.qa_history, list) else []
+            current_qa.append(new_entry)
+            lesson.qa_history = current_qa
+            lesson.transcript = text
+            lesson.direct_translation = direct_trans
+            lesson.pedagogical_adaptation = ped_result["pedagogical_adaptation"]
+            lesson.key_points = ped_result.get("key_points", [])
+            lesson.save()
+        else:
+            lesson = LessonRecord.objects.create(
+                title=topic or "Lesson",
+                grade=grade,
+                subject=subject,
+                source_lang=src,
+                target_lang=tgt,
+                transcript=text,
+                direct_translation=direct_trans,
+                pedagogical_adaptation=ped_result["pedagogical_adaptation"],
+                key_points=ped_result.get("key_points", []),
+                example=ped_result.get("example", ""),
+                learner_question=ped_result.get("learner_question", ""),
+                qa_history=[new_entry]
+            )
     except Exception as e:
         print("Database save notice:", e)
 
@@ -287,7 +317,9 @@ def translate_and_adapt_view(request):
         "pedagogical_adaptation": ped_result["pedagogical_adaptation"],
         "key_points": ped_result["key_points"],
         "rag_source": rag_res["source"],
-        "audio_script": ped_result["pedagogical_adaptation"]
+        "audio_script": ped_result["pedagogical_adaptation"],
+        "entry": new_entry,
+        "qa_history": lesson.qa_history if 'lesson' in locals() and lesson else [new_entry]
     })
 
 @api_view(['POST'])
@@ -474,6 +506,27 @@ def lessons_view(request):
                 f"{topic_name} କୁ ସହଜ ଉଦାହରଣ ମାଧ୍ୟମରେ ବୁଝିବା ।"
             ]
 
+            qa_list = l.qa_history if (isinstance(l.qa_history, list) and len(l.qa_history) > 0) else [
+                {
+                    "id": 1,
+                    "query": f"What is {topic_name}?",
+                    "direct_translation": f"{topic_name} କ'ଣ ?",
+                    "answer": ped_adapt,
+                    "pedagogical_adaptation": ped_adapt,
+                    "key_points": k_points,
+                    "timestamp": "10:30 AM"
+                },
+                {
+                    "id": 2,
+                    "query": f"Can you give an example of {topic_name}?",
+                    "direct_translation": f"{topic_name} ର ଏକ ଉଦାହରଣ ଦିଅନ୍ତୁ ?",
+                    "answer": l.example or f"ବାସ୍ତବ ଜୀବନରେ ଆମେ {topic_name} ର ପ୍ରଭାବ ଦେଖିପାରୁ ।",
+                    "pedagogical_adaptation": l.example or f"ବାସ୍ତବ ଜୀବନରେ ଆମେ {topic_name} ର ପ୍ରଭାବ ଦେଖିପାରୁ ।",
+                    "key_points": k_points,
+                    "timestamp": "10:35 AM"
+                }
+            ]
+
             res.append({
                 "id": l.id,
                 "title": l.title,
@@ -490,6 +543,7 @@ def lessons_view(request):
                 "key_points": k_points,
                 "example": l.example or f"{topic_name} ର ବାସ୍ତବ ଜୀବନ ଉଦାହରଣ ।",
                 "learner_question": l.learner_question or f"{topic_name} ବିଷୟରେ ତୁମର ମତାମତ କ'ଣ ?",
+                "qa_history": qa_list,
                 "date": l.created_at.strftime("%d %b %Y") if l.created_at else "Today"
             })
         return Response(res)
@@ -506,6 +560,7 @@ def lessons_view(request):
         key_points = data.get("key_points") or data.get("keyPoints") or []
         example = data.get("example", "")
         learner_question = data.get("learner_question", "")
+        qa_history = data.get("qa_history") or []
 
         lesson = LessonRecord.objects.create(
             title=title,
@@ -518,7 +573,8 @@ def lessons_view(request):
             pedagogical_adaptation=pedagogical_adaptation,
             key_points=key_points,
             example=example,
-            learner_question=learner_question
+            learner_question=learner_question,
+            qa_history=qa_history
         )
         return Response({
             "id": lesson.id,
@@ -536,7 +592,88 @@ def lessons_view(request):
             "key_points": lesson.key_points,
             "example": lesson.example,
             "learner_question": lesson.learner_question,
+            "qa_history": lesson.qa_history,
             "date": lesson.created_at.strftime("%d %b %Y") if lesson.created_at else "Today"
         }, status=status.HTTP_201_CREATED)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def lesson_query_view(request):
+    """
+    Endpoint: POST /api/lessons/query
+    Answers a query for a lesson in target vernacular language, and stores it in that lesson's qa_history in DB.
+    """
+    data = request.data or {}
+    query = (data.get("query") or data.get("text") or "").strip()
+    if not query:
+        return Response({"detail": "Empty query provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+    lesson_id = data.get("lesson_id") or data.get("id")
+    grade = str(data.get("grade", "Class 3")).strip()
+    subject = str(data.get("subject", "Science")).strip()
+    topic = str(data.get("topic", "Lesson")).strip()
+    lang = str(data.get("target_lang") or data.get("language") or "Odia").strip()
+    source_lang = str(data.get("source_lang", "English")).strip()
+
+    tutor_res = llm_service.tutor_respond(
+        query=f"Regarding {topic} ({grade} {subject}): {query}",
+        grade=grade,
+        subject=subject,
+        language_override=lang
+    )
+    rag_res = rag_engine.query(query, grade, subject, lang)
+    trans_res = translation_service.translate(query, source_lang, lang)
+
+    answer = tutor_res.get("response") or rag_res.get("answer") or f"{topic} ସମ୍ବନ୍ଧୀୟ ସରଳ ଉତ୍ତର ।"
+    direct_trans = trans_res.get("translated_text", "")
+
+    new_qa_entry = {
+        "id": int(time.time() * 1000),
+        "query": query,
+        "direct_translation": direct_trans,
+        "answer": answer,
+        "pedagogical_adaptation": answer,
+        "key_points": tutor_res.get("key_points", []),
+        "example": tutor_res.get("example", ""),
+        "timestamp": datetime.now().strftime("%I:%M %p")
+    }
+
+    lesson = None
+    if lesson_id:
+        try:
+            lesson = LessonRecord.objects.get(id=lesson_id)
+        except LessonRecord.DoesNotExist:
+            lesson = None
+
+    if not lesson:
+        lesson = LessonRecord.objects.filter(title=topic, grade=grade, subject=subject).order_by('-created_at').first()
+
+    if not lesson:
+        lesson = LessonRecord.objects.create(
+            title=topic,
+            grade=grade,
+            subject=subject,
+            source_lang=source_lang,
+            target_lang=lang,
+            transcript=query,
+            direct_translation=direct_trans,
+            pedagogical_adaptation=answer,
+            key_points=tutor_res.get("key_points", []),
+            qa_history=[new_qa_entry]
+        )
+    else:
+        current_qa = lesson.qa_history if isinstance(lesson.qa_history, list) else []
+        current_qa.append(new_qa_entry)
+        lesson.qa_history = current_qa
+        lesson.save()
+
+    return Response({
+        "entry": new_qa_entry,
+        "qa_history": lesson.qa_history,
+        "lesson_id": lesson.id,
+        "topic": lesson.title,
+        "grade": lesson.grade,
+        "subject": lesson.subject
+    }, status=status.HTTP_200_OK)
 
 

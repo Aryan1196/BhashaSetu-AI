@@ -23,5 +23,6 @@ urlpatterns = [
     re_path(r'^quiz/generate/?$', views.generate_quiz_view, name='generate_quiz'),
     re_path(r'^quiz/evaluate/?$', views.evaluate_quiz_view, name='evaluate_quiz'),
     re_path(r'^analytics/summary/?$', views.get_analytics_view, name='analytics_summary'),
+    re_path(r'^lessons/query/?$', views.lesson_query_view, name='lesson_query'),
     re_path(r'^lessons/?$', views.lessons_view, name='lessons'),
 ]
