@@ -17,7 +17,7 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 
 export const StudentDashboard: React.FC = () => {
-  const { setActivePanel, currentLesson, recentLessons } = useApp();
+  const { setActivePanel, currentLesson, recentLessons, selectLessonForReview } = useApp();
   const navigate = useNavigate();
 
   const handleNavigate = (path: string, panelNum: number) => {
@@ -25,16 +25,20 @@ export const StudentDashboard: React.FC = () => {
     navigate(path);
   };
 
+  const handleReviewLesson = (lesson: any) => {
+    if (selectLessonForReview) {
+      selectLessonForReview(lesson);
+      navigate('/pedagogy');
+    } else {
+      setActivePanel(5);
+      navigate('/pedagogy');
+    }
+  };
+
   const activeTopic = currentLesson?.topic || (recentLessons && recentLessons[0] ? (recentLessons[0].title || recentLessons[0].topic) : 'Water Cycle');
   const activeGrade = currentLesson?.grade || (recentLessons && recentLessons[0] ? recentLessons[0].grade : 'Class 3');
   const activeSubject = currentLesson?.subject || (recentLessons && recentLessons[0] ? recentLessons[0].subject : 'Science');
   const activeTargetLang = currentLesson?.targetLang || (recentLessons && recentLessons[0] ? (recentLessons[0].target_lang || recentLessons[0].target) : 'Odia');
-
-  const recentScores = [
-    { id: 1, topic: 'Water Cycle (ପାଣି ଚକ୍ର)', score: '3/3', percentage: 100, date: 'Today' },
-    { id: 2, topic: 'Plants & Parts (ଗଛ ଓ ଏହାର ଅଂଶ)', score: '3/3', percentage: 100, date: 'Yesterday' },
-    { id: 3, topic: 'Animals Around Us (ଆମ ଚାରିପାଖର ପ୍ରାଣୀ)', score: '2/3', percentage: 67, date: '2 days ago' },
-  ];
 
   return (
     <div className="max-w-5xl mx-auto py-6 px-4 sm:px-6 space-y-8">
@@ -69,7 +73,7 @@ export const StudentDashboard: React.FC = () => {
               📖
             </div>
             <div>
-              <Badge variant="teal">Current Lesson</Badge>
+              <Badge variant="teal">Current Active Lesson</Badge>
               <h2 className="text-xl font-bold text-white font-outfit mt-1">
                 {activeTopic} ({activeGrade} • {activeSubject})
               </h2>
@@ -78,8 +82,16 @@ export const StudentDashboard: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-3">
-            {/* 4. Continue Learning Button */}
-            <Button variant="primary" onClick={() => handleNavigate('/pedagogy', 5)}>
+            <Button 
+              variant="primary" 
+              onClick={() => {
+                if (recentLessons && recentLessons[0]) {
+                  handleReviewLesson(recentLessons[0]);
+                } else {
+                  handleNavigate('/pedagogy', 5);
+                }
+              }}
+            >
               <Play className="w-4 h-4 fill-current" />
               <span>Continue Learning</span>
             </Button>
@@ -90,12 +102,88 @@ export const StudentDashboard: React.FC = () => {
         <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 text-sm space-y-2">
           <p className="font-semibold text-white">Lesson Summary (ଓଡ଼ିଆ):</p>
           <p className="text-slate-300 font-outfit leading-relaxed">
-            "ସୂର୍ଯ୍ୟଙ୍କ ତାପରେ ପାଣି ଗରମ ହୋଇ ବାଷ୍ପ ପାଲଟିଯାଏ । ଏହାକୁ ଆମେ ବାଷ୍ପୀଭବନ ବୋଲି କୁହାଯାଏ ।"
+            {recentLessons && recentLessons[0]?.pedagogical_adaptation
+              ? recentLessons[0].pedagogical_adaptation
+              : "ସୂର୍ଯ୍ୟଙ୍କ ତାପରେ ପାଣି ଗରମ ହୋଇ ବାଷ୍ପ ପାଲଟିଯାଏ । ଏହାକୁ ଆମେ ବାଷ୍ପୀଭବନ ବୋଲି କୁହାଯାଏ ।"}
           </p>
         </div>
       </Card>
 
-      {/* Main Grid: 3. Ask AI Tutor Card & 7. Learning Progress */}
+      {/* 3. Past Lectures & Vernacular Classes Section */}
+      <Card className="p-6 md:p-8 space-y-6">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center font-bold text-xl border border-teal-500/30">
+              🎙️
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white font-outfit">
+                Past Lectures & Vernacular Recordings
+              </h2>
+              <p className="text-xs text-slate-400">
+                Click any lecture to re-hear teacher translation and pedagogical explanation
+              </p>
+            </div>
+          </div>
+          <Badge variant="teal">{recentLessons?.length || 0} Lectures Saved</Badge>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {(recentLessons || []).map((lesson: any, idx: number) => {
+            const displayTitle = lesson.title || lesson.topic || `Lecture ${idx + 1}`;
+            const displayTrans = lesson.direct_translation || lesson.directTranslation || "ଆଜି ଆମେ ପାଠ ବିଷୟରେ ଶିଖିବାକୁ ଯାଉଛୁ ।";
+            const displayPedagogy = lesson.pedagogical_adaptation || lesson.pedagogicalAdaptation || "ପାଠ୍ୟକ୍ରମ ଆଧାରିତ ସରଳ ଶିକ୍ଷଣ ବିବରଣୀ";
+
+            return (
+              <div 
+                key={lesson.id || idx}
+                onClick={() => handleReviewLesson(lesson)}
+                className="bg-slate-950 hover:bg-slate-900 border border-slate-800/80 hover:border-teal-500/40 rounded-2xl p-5 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-4 group shadow-md"
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-600/20 text-blue-400 border border-blue-500/30">
+                      {lesson.grade || 'Class 3'} • {lesson.subject || 'Science'}
+                    </span>
+                    <span className="text-[11px] text-slate-400 font-mono">
+                      {lesson.date || 'Saved'}
+                    </span>
+                  </div>
+
+                  <h3 className="text-base font-bold text-white group-hover:text-teal-400 transition-colors">
+                    {displayTitle}
+                  </h3>
+
+                  <div className="bg-slate-900/60 rounded-xl p-3 border border-slate-800/50 space-y-1.5">
+                    <p className="text-[11px] font-semibold text-teal-400">Translation:</p>
+                    <p className="text-xs text-slate-200 line-clamp-2 leading-relaxed">
+                      {displayTrans}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-slate-850">
+                  <span className="text-[11px] text-slate-400">
+                    Language: <strong className="text-slate-200">{lesson.target_lang || lesson.target || 'Odia'}</strong>
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleReviewLesson(lesson);
+                    }}
+                    className="inline-flex items-center space-x-1.5 text-xs font-bold text-teal-400 bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/30 px-3 py-1.5 rounded-xl transition-all"
+                  >
+                    <span>🔊 Re-hear Lecture</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      {/* Main Grid: Ask AI Tutor Card & Learning Progress */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         {/* Ask AI Tutor Banner Card */}
         <div className="md:col-span-6">
@@ -116,7 +204,7 @@ export const StudentDashboard: React.FC = () => {
           </Card>
         </div>
 
-        {/* 7. Learning Progress Card */}
+        {/* Learning Progress Card */}
         <div className="md:col-span-6">
           <Card className="space-y-4 p-6">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -149,7 +237,7 @@ export const StudentDashboard: React.FC = () => {
               </div>
 
               <div className="pt-2 text-slate-400 flex items-center justify-between font-mono">
-                <span>Completed Lessons: <strong>3/4</strong></span>
+                <span>Completed Lessons: <strong>{recentLessons?.length || 4}</strong></span>
               </div>
             </div>
           </Card>

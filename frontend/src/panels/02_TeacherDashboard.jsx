@@ -12,7 +12,7 @@ import {
 import { useApp } from '../context/AppContext';
 
 export const TeacherDashboard = () => {
-  const { setActivePanel, setCurrentLesson, userProfile, recentLessons, saveLesson } = useApp();
+  const { setActivePanel, setCurrentLesson, userProfile, recentLessons, saveLesson, selectLessonForReview } = useApp();
 
   const [quickForm, setQuickForm] = React.useState({
     grade: '',
@@ -185,7 +185,7 @@ export const TeacherDashboard = () => {
               {recentLessons.map((lesson) => (
                 <div
                   key={lesson.id}
-                  onClick={() => setActivePanel(5)}
+                  onClick={() => selectLessonForReview(lesson)}
                   className="p-3.5 rounded-xl bg-slate-950/60 hover:bg-slate-800/80 border border-slate-800/80 transition-all flex items-center justify-between cursor-pointer group"
                 >
                   <div className="flex items-center space-x-3">
@@ -197,7 +197,7 @@ export const TeacherDashboard = () => {
                         {lesson.title}
                       </h4>
                       <p className="text-xs text-slate-400">
-                        {lesson.grade} • {lesson.topic} • {lesson.source} → {lesson.target}
+                        {lesson.grade} • {lesson.subject || lesson.topic} • {lesson.source} → {lesson.target}
                       </p>
                     </div>
                   </div>

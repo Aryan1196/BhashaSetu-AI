@@ -6,6 +6,12 @@ class LessonRecord(models.Model):
     subject = models.CharField(max_length=100, default="Science")
     source_lang = models.CharField(max_length=50, default="English")
     target_lang = models.CharField(max_length=50, default="Odia")
+    transcript = models.TextField(default="", blank=True)
+    direct_translation = models.TextField(default="", blank=True)
+    pedagogical_adaptation = models.TextField(default="", blank=True)
+    key_points = models.JSONField(default=list, blank=True)
+    example = models.TextField(default="", blank=True)
+    learner_question = models.TextField(default="", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

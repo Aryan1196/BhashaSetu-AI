@@ -269,7 +269,13 @@ def translate_and_adapt_view(request):
             grade=grade,
             subject=subject,
             source_lang=src,
-            target_lang=tgt
+            target_lang=tgt,
+            transcript=text,
+            direct_translation=direct_trans,
+            pedagogical_adaptation=ped_result["pedagogical_adaptation"],
+            key_points=ped_result.get("key_points", []),
+            example=ped_result.get("example", ""),
+            learner_question=ped_result.get("learner_question", "")
         )
     except Exception as e:
         print("Database save notice:", e)
@@ -422,26 +428,62 @@ def lessons_view(request):
         lessons = LessonRecord.objects.all().order_by('-created_at')
         if not lessons.exists():
             defaults = [
-                {"title": "Water Cycle", "subject": "Science", "grade": "Class 3", "source_lang": "English", "target_lang": "Odia"},
-                {"title": "Plants and Their Parts", "subject": "Science", "grade": "Class 3", "source_lang": "English", "target_lang": "Odia"},
-                {"title": "Animals Around Us", "subject": "Science", "grade": "Class 3", "source_lang": "English", "target_lang": "Odia"},
-                {"title": "Our Environment", "subject": "Science", "grade": "Class 3", "source_lang": "English", "target_lang": "Odia"}
+                {
+                    "title": "Water Cycle", 
+                    "subject": "Science", 
+                    "grade": "Class 3", 
+                    "source_lang": "English", 
+                    "target_lang": "Odia",
+                    "transcript": "Today we are going to learn about the water cycle.",
+                    "direct_translation": "ଆଜି ଆମେ ପାଣି ଚକ୍ର ବିଷୟରେ ଶିଖିବାକୁ ଯାଉଛୁ ।",
+                    "pedagogical_adaptation": "ସୂର୍ଯ୍ୟଙ୍କ ତାପରେ ପାଣି ଗରମ ହୋଇ ବାଷ୍ପ ପାଲଟିଯାଏ । ଏହାକୁ ଆମେ ବାଷ୍ପୀଭବନ ବୋଲି କୁହାଯାଏ ।",
+                    "key_points": ["ସୂର୍ଯ୍ୟଙ୍କ ତାପ ଯୋଗୁଁ ପାଣି ଗରମ ହୁଏ ।", "ଗରମ ହେଲେ ପାଣି ବାଷ୍ପ ହୋଇ ଉପରକୁ ଉଠିଯାଏ ।"],
+                    "example": "ଗରମ ଚା' କପରୁ ଉପରକୁ ଉଠୁଥିବା ଧୂଆଁ ପରି ପାଣି ବାଷ୍ପ ହୁଏ ।",
+                    "learner_question": "ଖରାରେ ପାଣି ଥାଳି ରଖିଲେ ପାଣି କୁଆଡ଼େ ଯାଏ ?"
+                },
+                {
+                    "title": "Plants and Their Parts", 
+                    "subject": "Science", 
+                    "grade": "Class 3", 
+                    "source_lang": "English", 
+                    "target_lang": "Odia",
+                    "transcript": "Plants have roots, stems, leaves, flowers and fruits.",
+                    "direct_translation": "ଗଛ ଏବଂ ଏହାର ବିଭିନ୍ନ ଅଂଶ ।",
+                    "pedagogical_adaptation": "ଗଛର ମୂଳ ମାଟି ତଳୁ ପାଣି ଓ ଖଣିଜ ଲବଣ ଟାଣି ଗଛକୁ ବଢ଼ିବାରେ ସାହାଯ୍ୟ କରେ ।",
+                    "key_points": ["ମୂଳ ମାଟିରୁ ପାଣି ଶୋଷଣ କରେ ।", "ପତ୍ର ସୂର୍ଯ୍ୟାଲୋକରୁ ଖାଦ୍ୟ ପ୍ରସ୍ତୁତ କରେ ।"],
+                    "example": "ଛୋଟ ଗଛକୁ ପାଣି ଦେଲେ ସେ କିପରି ସତେଜ ହୁଏ ।",
+                    "learner_question": "ଗଛର କେଉଁ ଅଂଶ ତଳେ ଥାଏ ?"
+                }
             ]
             for item in defaults:
                 LessonRecord.objects.create(**item)
             lessons = LessonRecord.objects.all().order_by('-created_at')
         res = []
         for l in lessons:
+            topic_name = l.title or l.subject or "Lesson"
+            direct_trans = l.direct_translation or f"ଆଜି ଆମେ {topic_name} ବିଷୟରେ ଶିଖିବାକୁ ଯାଉଛୁ ।"
+            ped_adapt = l.pedagogical_adaptation or f"{topic_name} ସମ୍ବନ୍ଧୀୟ ପ୍ରାଥମିକ ଶିକ୍ଷଣ ବିବରଣୀ । ସୂର୍ଯ୍ୟଙ୍କ ତାପରେ ପାଣି ଗରମ ହୋଇ ବାଷ୍ପ ପାଲଟିଯାଏ ।"
+            k_points = l.key_points if (isinstance(l.key_points, list) and len(l.key_points) > 0) else [
+                f"{topic_name} ର ମୁଖ୍ୟ ଧାରଣା ।",
+                f"{topic_name} କୁ ସହଜ ଉଦାହରଣ ମାଧ୍ୟମରେ ବୁଝିବା ।"
+            ]
+
             res.append({
                 "id": l.id,
                 "title": l.title,
-                "topic": l.subject,
+                "topic": l.title or l.subject,
                 "grade": l.grade,
                 "subject": l.subject,
                 "source": l.source_lang,
                 "target": l.target_lang,
                 "source_lang": l.source_lang,
                 "target_lang": l.target_lang,
+                "transcript": l.transcript or "",
+                "direct_translation": direct_trans,
+                "pedagogical_adaptation": ped_adapt,
+                "key_points": k_points,
+                "example": l.example or f"{topic_name} ର ବାସ୍ତବ ଜୀବନ ଉଦାହରଣ ।",
+                "learner_question": l.learner_question or f"{topic_name} ବିଷୟରେ ତୁମର ମତାମତ କ'ଣ ?",
                 "date": l.created_at.strftime("%d %b %Y") if l.created_at else "Today"
             })
         return Response(res)
@@ -452,23 +494,43 @@ def lessons_view(request):
         subject = data.get("subject", "Science")
         source_lang = data.get("source_lang") or data.get("source") or "English"
         target_lang = data.get("target_lang") or data.get("target") or "Odia"
+        transcript = data.get("transcript", "")
+        direct_translation = data.get("direct_translation") or data.get("directTranslation", "")
+        pedagogical_adaptation = data.get("pedagogical_adaptation") or data.get("pedagogicalAdaptation", "")
+        key_points = data.get("key_points") or data.get("keyPoints") or []
+        example = data.get("example", "")
+        learner_question = data.get("learner_question", "")
+
         lesson = LessonRecord.objects.create(
             title=title,
             grade=grade,
             subject=subject,
             source_lang=source_lang,
-            target_lang=target_lang
+            target_lang=target_lang,
+            transcript=transcript,
+            direct_translation=direct_translation,
+            pedagogical_adaptation=pedagogical_adaptation,
+            key_points=key_points,
+            example=example,
+            learner_question=learner_question
         )
         return Response({
             "id": lesson.id,
             "title": lesson.title,
-            "topic": lesson.subject,
+            "topic": lesson.title or lesson.subject,
             "grade": lesson.grade,
             "subject": lesson.subject,
             "source": lesson.source_lang,
             "target": lesson.target_lang,
             "source_lang": lesson.source_lang,
             "target_lang": lesson.target_lang,
+            "transcript": lesson.transcript,
+            "direct_translation": lesson.direct_translation,
+            "pedagogical_adaptation": lesson.pedagogical_adaptation,
+            "key_points": lesson.key_points,
+            "example": lesson.example,
+            "learner_question": lesson.learner_question,
             "date": lesson.created_at.strftime("%d %b %Y") if lesson.created_at else "Today"
         }, status=status.HTTP_201_CREATED)
+
 

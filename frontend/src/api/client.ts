@@ -407,7 +407,22 @@ export const apiClient = {
     }
   },
 
-  async createLesson(payload: { title?: string; topic?: string; grade?: string; subject?: string; source_lang?: string; target_lang?: string; source?: string; target?: string }) {
+  async createLesson(payload: { 
+    title?: string; 
+    topic?: string; 
+    grade?: string; 
+    subject?: string; 
+    source_lang?: string; 
+    target_lang?: string; 
+    source?: string; 
+    target?: string;
+    transcript?: string;
+    direct_translation?: string;
+    pedagogical_adaptation?: string;
+    key_points?: string[];
+    example?: string;
+    learner_question?: string;
+  }) {
     try {
       const res = await fetch(`${API_BASE_URL}/lessons`, {
         method: 'POST',
@@ -426,6 +441,12 @@ export const apiClient = {
         subject: payload.subject || 'Science',
         source: payload.source_lang || payload.source || 'English',
         target: payload.target_lang || payload.target || 'Odia',
+        transcript: payload.transcript || '',
+        direct_translation: payload.direct_translation || '',
+        pedagogical_adaptation: payload.pedagogical_adaptation || '',
+        key_points: payload.key_points || [],
+        example: payload.example || '',
+        learner_question: payload.learner_question || '',
         date: 'Today'
       };
     }

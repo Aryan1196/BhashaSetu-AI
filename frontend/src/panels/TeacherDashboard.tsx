@@ -7,7 +7,7 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 
 export const TeacherDashboard: React.FC = () => {
-  const { setActivePanel, setCurrentLesson, userProfile, recentLessons, saveLesson } = useApp();
+  const { setActivePanel, setCurrentLesson, userProfile, recentLessons, saveLesson, selectLessonForReview } = useApp();
   const navigate = useNavigate();
 
   const [quickForm, setQuickForm] = React.useState({
@@ -229,7 +229,11 @@ export const TeacherDashboard: React.FC = () => {
               {recentLessons.map((lesson: any) => (
                 <div
                   key={lesson.id}
-                  onClick={() => { setActivePanel(5); navigate('/pedagogy'); }}
+                  onClick={() => { 
+                    if (selectLessonForReview) selectLessonForReview(lesson);
+                    else setActivePanel(5);
+                    navigate('/pedagogy'); 
+                  }}
                   className="p-4 rounded-2xl bg-slate-950 hover:bg-slate-800/60 border border-slate-800/80 transition-all flex items-center justify-between cursor-pointer group"
                 >
                   <div className="flex items-center space-x-3.5">
@@ -241,7 +245,7 @@ export const TeacherDashboard: React.FC = () => {
                         {lesson.title}
                       </h4>
                       <p className="text-xs text-slate-400">
-                        {lesson.grade} • {lesson.topic} • {lesson.source} → {lesson.target}
+                        {lesson.grade} • {lesson.subject || lesson.topic} • {lesson.source} → {lesson.target}
                       </p>
                     </div>
                   </div>

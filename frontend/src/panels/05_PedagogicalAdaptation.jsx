@@ -10,8 +10,11 @@ export const PedagogicalAdaptation = () => {
   const [loading, setLoading] = useState(false);
   const [isMock, setIsMock] = useState(false);
 
-  // Fetch pedagogical explanation from backend on mount or when translationResult changes
+  // Fetch pedagogical explanation from backend only if not already loaded from lecture history
   useEffect(() => {
+    if (pedagogyResult?.simple_explanation || translationResult?.pedagogicalAdaptation) {
+      return;
+    }
     const sourceText = translationResult?.directTranslation ||
       "Today we are going to learn about the water cycle.";
     setLoading(true);
@@ -22,11 +25,16 @@ export const PedagogicalAdaptation = () => {
   }, [translationResult?.directTranslation]);
 
   const handlePlayTTS = async (text) => {
-    const res = await apiClient.synthesizeSpeech(text, currentLesson.targetLang);
-    if (res && res.audio_url && res.audio_supported) {
-      speakText(text, res.audio_url, currentLesson.targetLang);
-    } else {
-      speakText(text, currentLesson.targetLang);
+    if (!text || !text.trim()) return;
+    try {
+      const res = await apiClient.synthesizeSpeech(text, currentLesson.targetLang || 'Odia');
+      if (res && res.audio_url && res.audio_url.startsWith('data:audio')) {
+        speakText(text, res.audio_url, currentLesson.targetLang || 'Odia');
+      } else {
+        speakText(text, currentLesson.targetLang || 'Odia');
+      }
+    } catch (e) {
+      speakText(text, currentLesson.targetLang || 'Odia');
     }
   };
 

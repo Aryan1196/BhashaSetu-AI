@@ -14,7 +14,7 @@ export const AppProvider = ({ children }) => {
   const [activePanel, setActivePanel] = useState(1);
   const [userRole, setUserRole] = useState('Teacher');
   const [backendStatus, setBackendStatus] = useState('Checking...');
-  
+
   const [currentLesson, setCurrentLessonState] = useState(() => {
     const saved = localStorage.getItem('bhashasetu_current_lesson');
     if (saved) {
@@ -23,7 +23,7 @@ export const AppProvider = ({ children }) => {
         if (parsed && (parsed.topic || parsed.grade || parsed.subject)) {
           return parsed;
         }
-      } catch (e) {}
+      } catch (e) { }
     }
     return {
       grade: '',
@@ -38,7 +38,7 @@ export const AppProvider = ({ children }) => {
     setCurrentLessonState(newLesson);
     try {
       localStorage.setItem('bhashasetu_current_lesson', JSON.stringify(newLesson));
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const [recentLessons, setRecentLessons] = useState([]);
@@ -147,45 +147,105 @@ export const AppProvider = ({ children }) => {
       const [transRes, aiRes] = await Promise.allSettled([
         apiClient.translate({
           text,
-          source_lang: currentLesson.sourceLang,
-          target_lang: currentLesson.targetLang,
-          grade: currentLesson.grade,
-          subject: currentLesson.subject,
-          topic: currentLesson.topic
+          source_lang: currentLesson.sourceLang || 'English',
+          target_lang: currentLesson.targetLang || 'Odia',
+          grade: currentLesson.grade || 'Class 3',
+          subject: currentLesson.subject || 'Science',
+          topic: currentLesson.topic || 'Lesson'
         }),
         apiClient.aiRespond({
           text,
-          source_language: currentLesson.sourceLang,
-          target_language: currentLesson.targetLang,
-          grade: currentLesson.grade,
-          subject: currentLesson.subject
+          source_language: currentLesson.sourceLang || 'English',
+          target_language: currentLesson.targetLang || 'Odia',
+          grade: currentLesson.grade || 'Class 3',
+          subject: currentLesson.subject || 'Science'
         })
       ]);
 
       const transData = transRes.status === 'fulfilled' ? transRes.value : null;
       const aiData = aiRes.status === 'fulfilled' ? aiRes.value : null;
 
+      const directText = transData?.direct_translation || "ଆଜି ଆମେ ପାଠ ଶିଖିବାକୁ ଯାଉଛୁ ।";
       const adaptedText = aiData?.response || transData?.pedagogical_adaptation || "ପାଠ୍ୟକ୍ରମ ଆଧାରିତ ଶିକ୍ଷଣ ବିବରଣୀ";
+      const keyPoints = transData?.key_points || aiData?.key_points || ["ସୂର୍ଯ୍ୟଙ୍କ ତାପ ଯୋଗୁଁ ପାଣି ଗରମ ହୁଏ ।"];
 
-      setTranslationResult({
-        directTranslation: transData?.direct_translation || adaptedText,
+      const translationData = {
+        directTranslation: directText,
         pedagogicalAdaptation: adaptedText,
-        keyPoints: transData?.key_points || ["Sun warms water and changes it into vapor.", "Vapor rises up to form clouds."],
-        ragSource: transData?.rag_source || `${currentLesson.grade} ${currentLesson.subject}`
+        keyPoints: keyPoints,
+        ragSource: transData?.rag_source || `${currentLesson.grade || 'Class 3'} ${currentLesson.subject || 'Science'}`
+      };
+      setTranslationResult(translationData);
+
+      setPedagogyResult({
+        simple_explanation: adaptedText,
+        key_points: keyPoints,
+        example: aiData?.example || "",
+        learner_question: aiData?.follow_up_question || ""
       });
 
-      return transData || { direct_translation: adaptedText, pedagogical_adaptation: adaptedText };
+      // Save to database
+      saveLesson({
+        topic: currentLesson.topic || `${currentLesson.subject || 'Science'} Lesson`,
+        grade: currentLesson.grade || 'Class 3',
+        subject: currentLesson.subject || 'Science',
+        sourceLang: currentLesson.sourceLang || 'English',
+        targetLang: currentLesson.targetLang || 'Odia',
+        transcript: text,
+        direct_translation: directText,
+        pedagogical_adaptation: adaptedText,
+        key_points: keyPoints,
+        example: aiData?.example || "",
+        learner_question: aiData?.follow_up_question || ""
+      });
+
+      return transData || { direct_translation: directText, pedagogical_adaptation: adaptedText };
     } catch (e) {
       console.warn("Translation pipeline notice:", e);
       return null;
     }
   };
 
+  // Helper to load past lecture for review and navigate to Translation + Pedagogy screen
+  const selectLessonForReview = (lesson) => {
+    if (!lesson) return;
+    const updatedLesson = {
+      grade: lesson.grade || 'Class 3',
+      subject: lesson.subject || 'Science',
+      topic: lesson.title || lesson.topic || 'Lesson',
+      sourceLang: lesson.source_lang || lesson.source || 'English',
+      targetLang: lesson.target_lang || lesson.target || 'Odia'
+    };
+    setCurrentLesson(updatedLesson);
+
+    const directTranslation = lesson.direct_translation || lesson.directTranslation || 'ଆଜି ଆମେ ପାଠ ଶିଖିବାକୁ ଯାଉଛୁ ।';
+    const pedagogicalAdaptation = lesson.pedagogical_adaptation || lesson.pedagogicalAdaptation || 'ପାଠ୍ୟକ୍ରମ ଆଧାରିତ ଶିକ୍ଷଣ ବିବରଣୀ';
+    const keyPoints = Array.isArray(lesson.key_points) && lesson.key_points.length > 0
+      ? lesson.key_points
+      : (Array.isArray(lesson.keyPoints) && lesson.keyPoints.length > 0 ? lesson.keyPoints : ["ପାଠ୍ୟକ୍ରମ ଆଧାରିତ ମୁଖ୍ୟ ବିନ୍ଦୁ ।"]);
+
+    setTranslationResult({
+      directTranslation,
+      pedagogicalAdaptation,
+      keyPoints,
+      ragSource: `${updatedLesson.grade} ${updatedLesson.subject} - ${updatedLesson.topic} (State Textbook)`
+    });
+
+    setPedagogyResult({
+      simple_explanation: pedagogicalAdaptation,
+      key_points: keyPoints,
+      example: lesson.example || '',
+      learner_question: lesson.learner_question || ''
+    });
+
+    setActivePanel(5);
+  };
+
   // Fetch pedagogical explanation from backend
   const fetchPedagogy = async (text) => {
     try {
-      const gradeNum = parseInt(currentLesson.grade.replace('Class', '').trim()) || 3;
-      const res = await apiClient.pedagogyExplain(text, gradeNum, currentLesson.subject, currentLesson.targetLang);
+      const gradeNum = parseInt((currentLesson.grade || 'Class 3').replace('Class', '').trim()) || 3;
+      const res = await apiClient.pedagogyExplain(text, gradeNum, currentLesson.subject || 'Science', currentLesson.targetLang || 'Odia');
       setPedagogyResult(res);
       return res;
     } catch (err) {
@@ -247,8 +307,8 @@ export const AppProvider = ({ children }) => {
       }
     }
 
-    const lang = typeof audioUrlOrLang === 'string' && !audioUrlOrLang.startsWith('data:') && !audioUrlOrLang.startsWith('http') 
-      ? audioUrlOrLang 
+    const lang = typeof audioUrlOrLang === 'string' && !audioUrlOrLang.startsWith('data:') && !audioUrlOrLang.startsWith('http')
+      ? audioUrlOrLang
       : langParam;
 
     speakBrowserUtterance(text, lang);
@@ -259,7 +319,7 @@ export const AppProvider = ({ children }) => {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 0.85;
-      
+
       const langMap = {
         'Odia': 'or-IN',
         'Hindi': 'hi-IN',
@@ -270,8 +330,8 @@ export const AppProvider = ({ children }) => {
       utterance.lang = langMap[lang] || 'or-IN';
 
       const voices = window.speechSynthesis.getVoices();
-      const targetVoice = voices.find(v => 
-        v.lang.toLowerCase().includes(utterance.lang.toLowerCase()) || 
+      const targetVoice = voices.find(v =>
+        v.lang.toLowerCase().includes(utterance.lang.toLowerCase()) ||
         v.lang.toLowerCase().includes((lang || 'Odia').toLowerCase().slice(0, 2))
       );
       if (targetVoice) {
@@ -301,6 +361,7 @@ export const AppProvider = ({ children }) => {
         setRecentLessons,
         loadLessons,
         saveLesson,
+        selectLessonForReview,
         translationResult,
         setTranslationResult,
         processTranslation,
