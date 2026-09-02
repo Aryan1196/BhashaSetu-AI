@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { GraduationCap, Users, Mail, Lock, User, ArrowRight, Sparkles } from 'lucide-react';
+import { GraduationCap, Users, Mail, Lock, User, ArrowRight, Sparkles, AlertCircle } from 'lucide-react';
+
+const AUTHORIZED_EMAIL = 'aryanaks0007@gmail.com';
+const AUTHORIZED_PASSWORD = '12345';
 
 export const AuthPage = () => {
   const { userRole, setUserRole, setActivePanel, setUserProfile } = useApp();
@@ -10,6 +13,7 @@ export const AuthPage = () => {
   const navStateRole = location.state?.role;
   
   const [isLogin, setIsLogin] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -19,15 +23,23 @@ export const AuthPage = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setErrorMessage('');
+
+    const inputEmail = (formData.email || '').trim().toLowerCase();
+    const inputPassword = (formData.password || '').trim();
+
+    // Enforce hardcoded credentials check
+    if (inputEmail !== AUTHORIZED_EMAIL || inputPassword !== AUTHORIZED_PASSWORD) {
+      setErrorMessage('Invalid credentials. Please use the authorized email and password.');
+      return;
+    }
     
-    // In a real app, this would authenticate against the backend.
-    // For this demo, we'll just set the role and navigate.
-    const selectedRole = formData.role;
+    const selectedRole = formData.role || 'Teacher';
     
     // Update profile
     setUserProfile({
-      name: formData.name || (selectedRole === 'Teacher' ? 'Teacher' : 'Student'),
-      email: formData.email || (selectedRole === 'Teacher' ? 'teacher@bhashasetu.ai' : 'student@bhashasetu.ai'),
+      name: formData.name || (selectedRole === 'Teacher' ? 'Aryan Kumar (Teacher)' : 'Aryan Kumar (Student)'),
+      email: AUTHORIZED_EMAIL,
       school: 'Government Primary School',
       role: selectedRole,
       gradeSubject: selectedRole === 'Teacher' ? 'Class 3 - Science' : 'Class 3'
@@ -45,6 +57,7 @@ export const AuthPage = () => {
 
   const toggleAuthMode = () => {
     setIsLogin(!isLogin);
+    setErrorMessage('');
   };
 
   return (
@@ -74,6 +87,14 @@ export const AuthPage = () => {
             <p className="text-slate-400 text-sm mb-6">
               {isLogin ? 'Sign in to continue to your dashboard.' : 'Join the platform to access customized tools.'}
             </p>
+
+            {/* Error Message Banner */}
+            {errorMessage && (
+              <div className="mb-5 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-start space-x-2.5 text-rose-300 text-xs animate-fade-in">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                <span className="leading-relaxed">{errorMessage}</span>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {!isLogin && (
