@@ -44,6 +44,38 @@ def detect_query_language(text: str, default: str = "English") -> str:
     return default
 
 
+def clean_repetitive_loops(text: str) -> str:
+    """
+    Post-processing guard to eliminate repetitive token degeneration or loop stuttering.
+    Safely compresses words or 2-3 word phrases repeating consecutively.
+    """
+    if not text or not text.strip():
+        return text
+
+    # 1. Clean individual words repeated 2+ times consecutively
+    tokens = text.split()
+    if not tokens:
+        return text
+
+    cleaned_tokens = []
+    i = 0
+    while i < len(tokens):
+        w = tokens[i]
+        cleaned_tokens.append(w)
+        # Skip subsequent identical tokens
+        while i + 1 < len(tokens) and tokens[i + 1] == w:
+            i += 1
+        i += 1
+
+    cleaned = " ".join(cleaned_tokens)
+
+    # 2. Clean 2-word phrase loops (e.g., 'ଗୋଟିଏ ଛୋଟ ଗୋଟିଏ ଛୋଟ ଗୋଟିଏ ଛୋଟ')
+    pattern_2word = re.compile(r'(\b\S+\s+\S+)(?:\s+\1){2,}', re.UNICODE)
+    cleaned = pattern_2word.sub(r'\1', cleaned)
+
+    return re.sub(r'\s+', ' ', cleaned).strip()
+
+
 class BaseLLMProvider(ABC):
     """Abstract Base Class for LLM Providers."""
 
@@ -80,20 +112,20 @@ class MockLLMProvider(BaseLLMProvider):
     DEMO_KB = {
         "water evaporates when heated by the sun": {
             "Odia": {
-                "Class 1": "ସୂର୍ଯ୍ୟଙ୍କ ଖରାରେ ପାଣି ଗରମ ହୋଇ ଉଡ଼ିଯାଏ ।",
-                "Class 2": "ସୂର୍ଯ୍ୟଙ୍କ ତାପରେ ପାଣି ଗରମ ହୋଇ ବାଷ୍ପ ପାଲଟି ଉପରକୁ ଉଠିଯାଏ ।",
-                "Class 3": "ସୂର୍ଯ୍ୟଙ୍କ ତାପରେ ନଦୀ ଓ ପୋଖରୀର ପାଣି ଗରମ ହୋଇ ଛୋଟ ଛୋଟ ବାଷ୍ପ ପାଲଟିଯାଏ । ଏହାକୁ ବାଷ୍ପୀଭବନ କୁହାଯାଏ, ଯେମିତି ଗରମ ଚା'ରୁ ଧୂଆଁ ଉଠେ ।",
-                "Class 4": "ସୂର୍ଯ୍ୟଙ୍କ ଉତ୍ତାପ ଯୋଗୁଁ ଜଳ ଗରମ ହୋଇ ଜଳୀୟ ବାଷ୍ପରେ ପରିଣତ ହୁଏ ଏବଂ ବାୟୁମଣ୍ଡଳକୁ ଯାଏ । ଏହି ପ୍ରକ୍ରିୟାକୁ ବାଷ୍ପୀଭବନ କୁହାଯାଏ ।",
-                "Class 5": "ସୂର୍ଯ୍ୟଙ୍କ କିରଣରେ ପୃଥିବୀ ପୃଷ୍ଠର ଜଳ ଗରମ ହୋଇ ଅଦୃଶ୍ୟ ଜଳୀୟ ବାଷ୍ପରେ ପରିଣତ ହୋଇ ଉପରକୁ ଉଠିଯାଏ । ଏହା ହେଉଛି ଜଳଚକ୍ରର ପ୍ରଥମ ପଦକ୍ଷେପ ଯାହାକୁ ବାଷ୍ପୀଭବନ କୁହାଯାଏ ।"
+                "Class 1": "\u0b38\u0b42\u0b30\u0b4d\u0b2f\u0b19\u0b4d\u0b15 \u0b16\u0b30\u0b3e\u0b30\u0b47 \u0b2a\u0b3e\u0b23\u0b3f \u0b17\u0b30\u0b2e \u0b39\u0b4b\u0b07 \u0b09\u0b21\u0b3c\u0b3f\u0b2f\u0b3e\u0b0f \u0964",
+                "Class 2": "\u0b38\u0b42\u0b30\u0b4d\u0b2f\u0b19\u0b4d\u0b15 \u0b24\u0b3e\u0b2a\u0b30\u0b47 \u0b2a\u0b3e\u0b23\u0b3f \u0b17\u0b30\u0b2e \u0b39\u0b4b\u0b07 \u0b2c\u0b3e\u0b37\u0b4d\u0b2a \u0b2a\u0b3e\u0b32\u0b1f\u0b3f \u0b09\u0b2a\u0b30\u0b15\u0b41 \u0b09\u0b20\u0b3f\u0b2f\u0b3e\u0b0f \u0964",
+                "Class 3": "\u0b38\u0b42\u0b30\u0b4d\u0b2f\u0b19\u0b4d\u0b15 \u0b24\u0b3e\u0b2a\u0b30\u0b47 \u0b28\u0b26\u0b40 \u0b13 \u0b2a\u0b4b\u0b16\u0b30\u0b40\u0b30 \u0b2a\u0b3e\u0b23\u0b3f \u0b17\u0b30\u0b2e \u0b39\u0b4b\u0b07 \u0b1b\u0b4b\u0b1f \u0b1b\u0b4b\u0b1f \u0b2c\u0b3e\u0b37\u0b4d\u0b2a \u0b2a\u0b3e\u0b32\u0b1f\u0b3f\u0b2f\u0b3e\u0b0f \u0964 \u0b0f\u0b39\u0b3e\u0b15\u0b41 \u0b2c\u0b3e\u0b37\u0b4d\u0b2a\u0b40\u0b2d\u0b2c\u0b28 (Evaporation) \u0b15\u0b41\u0b39\u0b3e\u0b2f\u0b3e\u0b0f, \u0b2f\u0b47\u0b2e\u0b3f\u0b24\u0b3f \u0b17\u0b30\u0b2e \u0b1a\u0b3e\u2019\u0b30\u0b41 \u0b27\u0b42\u0b06\u0b01 \u0b09\u0b20\u0b47 \u0964",
+                "Class 4": "\u0b38\u0b42\u0b30\u0b4d\u0b2f\u0b19\u0b4d\u0b15 \u0b09\u0b24\u0b4d\u0b24\u0b3e\u0b2a \u0b2f\u0b4b\u0b17\u0b41\u0b01 \u0b1c\u0b33 \u0b17\u0b30\u0b2e \u0b39\u0b4b\u0b07 \u0b1c\u0b33\u0b40\u0b5f \u0b2c\u0b3e\u0b37\u0b4d\u0b2a\u0b30\u0b47 \u0b2a\u0b30\u0b3f\u0b23\u0b24 \u0b39\u0b41\u0b0f \u0b0f\u0b2c\u0b02 \u0b2c\u0b3e\u0b5f\u0b41\u0b2e\u0b23\u0b4d\u0b21\u0b33\u0b15\u0b41 \u0b2f\u0b3e\u0b0f \u0964 \u0b0f\u0b39\u0b3f \u0b2a\u0b4d\u0b30\u0b15\u0b4d\u0b30\u0b3f\u0b5f\u0b3e\u0b15\u0b41 \u0b2c\u0b3e\u0b37\u0b4d\u0b2a\u0b40\u0b2d\u0b2c\u0b28 (Evaporation) \u0b15\u0b41\u0b39\u0b3e\u0b2f\u0b3e\u0b0f \u0964",
+                "Class 5": "\u0b38\u0b42\u0b30\u0b4d\u0b2f\u0b19\u0b4d\u0b15 \u0b15\u0b3f\u0b30\u0b23\u0b30\u0b47 \u0b2a\u0b43\u0b25\u0b3f\u0b2c\u0b40 \u0b2a\u0b43\u0b37\u0b4d\u0b20\u0b30 \u0b1c\u0b33 \u0b17\u0b30\u0b2e \u0b39\u0b4b\u0b07 \u0b05\u0b26\u0b43\u0b36\u0b4d\u0b2f \u0b1c\u0b33\u0b40\u0b5f \u0b2c\u0b3e\u0b37\u0b4d\u0b2a\u0b30\u0b47 \u0b2a\u0b30\u0b3f\u0b23\u0b24 \u0b39\u0b4b\u0b07 \u0b09\u0b2a\u0b30\u0b15\u0b41 \u0b09\u0b20\u0b3f\u0b2f\u0b3e\u0b0f \u0964 \u0b0f\u0b39\u0b3e \u0b39\u0b47\u0b09\u0b1b\u0b3f \u0b1c\u0b33\u0b1a\u0b15\u0b4d\u0b30\u0b30 \u0b2a\u0b4d\u0b30\u0b25\u0b2e \u0b2a\u0b26\u0b15\u0b4d\u0b37\u0b47\u0b2a \u0b2f\u0b3e\u0b39\u0b3e\u0b15\u0b41 \u0b2c\u0b3e\u0b37\u0b4d\u0b2a\u0b40\u0b2d\u0b2c\u0b28 (Evaporation) \u0b15\u0b41\u0b39\u0b3e\u0b2f\u0b3e\u0b0f \u0964"
             },
             "Hindi": {
-                "Class 3": "सूरज की गर्मी से पानी गरम होकर भाप बन जाता है और ऊपर हवा में उड़ जाता है। इसे वाष्पीकरण कहते हैं, जैसे गरम दूध से भाप निकलती है।"
+                "Class 3": "\u0938\u0942\u0930\u091c \u0915\u0940 \u0917\u0930\u094d\u092e\u0940 \u0938\u0947 \u092a\u093e\u0928\u0940 \u0917\u0930\u092e \u0939\u094b\u0915\u0930 \u092d\u093e\u092a \u092c\u0928 \u091c\u093e\u0924\u093e \u0939\u0948 \u0914\u0930 \u090a\u092a\u0930 \u0939\u0935\u093e \u092e\u0947\u0902 \u0909\u0921\u093c \u091c\u093e\u0924\u093e \u0939\u0948\u0964 \u0907\u0938\u0947 \u0935\u093e\u0937\u094d\u092a\u0940\u0915\u0930\u0923 (Evaporation) \u0915\u0939\u0924\u0947 \u0939\u0948\u0902, \u091c\u0948\u0938\u0947 \u0917\u0930\u092e \u0926\u0942\u0927 \u0938\u0947 \u092d\u093e\u092a \u0928\u093f\u0915\u0932\u0924\u0940 \u0939\u0948\u0964"
             },
             "Bengali": {
-                "Class 3": "সূর্যের তাপে জল গরম হয়ে বাষ্পে পরিণত হয় এবং ওপরে উঠে যায়। একে বাষ্পীভবন বলা হয়।"
+                "Class 3": "\u09b8\u09c2\u09b0\u09cd\u09af\u09c7\u09b0 \u09a4\u09be\u09aa\u09c7 \u099c\u09b2 \u0997\u09b0\u09ae \u09b9\u09df\u09c7 \u09ac\u09be\u09b7\u09cd\u09aa\u09c7 \u09aa\u09b0\u09bf\u09a3\u09a4 \u09b9\u09df \u098f\u09ac\u0982 \u0993\u09aa\u09b0\u09c7 \u0989\u09a0\u09c7 \u09af\u09be\u09df\u0964 \u098f\u0995\u09c7 \u09ac\u09be\u09b7\u09cd\u09aa\u09c0\u09ad\u09ac\u09a8 (Evaporation) \u09ac\u09b2\u09be \u09b9\u09df\u0964"
             },
             "Santhali": {
-                "Class 3": "ᱥᱤᱛᱩᱝ ᱛᱮ ᱫᱟᱜ ᱞᱚᱞᱚ ᱠᱟᱛᱮ ᱦᱚᱭ ᱛᱮ ᱪᱮᱛᱟᱱ ᱨᱟᱠᱟᱵᱚᱜᱼᱟ ᱾ ᱱᱚᱣᱟ ᱫᱚ ᱵᱟᱥᱯᱚ ᱠᱚ ᱢᱮᱛᱟᱜᱼᱟ ᱾"
+                "Class 3": "\u1c65\u1c64\u1c69\u1c69\u1c5e \u1c6b\u1c61 \u1c6a\u1c5f\u1c5e \u1c66\u1c5a\u1c66\u1c5a \u1c60\u1c5f\u1c6b\u1c61 \u1c6d\u1c5a\u1c60 \u1c5f\u1c62 \u1c6e\u1c61\u1c6b\u1c5f\u1c62 \u1c68\u1c5f\u1c60\u1c5f\u1c56\u1c5a\u1c5e\u1c3c\u1c5f \u1c64 \u1c62\u1c5a\u1c61\u1c5f \u1c6a\u1c5a \u1c56\u1c5f\u1c65\u1c6f\u1c5a \u1c60\u1c5a \u1c5d\u1c61\u1c6b\u1c5f\u1c5e\u1c3c\u1c5f \u1c64"
             },
             "English": {
                 "Class 3": "When the sun warms up water in ponds and lakes, it turns into tiny invisible steam called water vapour and floats up into the sky. This is called evaporation."
@@ -101,18 +133,18 @@ class MockLLMProvider(BaseLLMProvider):
         },
         "today we are going to learn about the water cycle": {
             "Odia": {
-                "Class 3": "ଆଜି ଆମେ ଶିଖିବା ଯେ ପାଣି କିପରି ସୂର୍ଯ୍ୟଙ୍କ ତାପରେ ବାଷ୍ପ ହୋଇ ମେଘ ପାଲଟେ ଏବଂ ପୁଣି ବର୍ଷା ହୋଇ ଧରିତ୍ରୀକୁ ଫେରିଆସେ । ଏହାକୁ ଜଳଚକ୍ର କୁହାଯାଏ ।"
+                "Class 3": "\u0b06\u0b1c\u0b3f \u0b06\u0b2e\u0b47 \u0b36\u0b3f\u0b16\u0b3f\u0b2c\u0b3e \u0b2f\u0b47 \u0b2a\u0b3e\u0b23\u0b3f \u0b15\u0b3f\u0b2a\u0b30\u0b3f \u0b38\u0b42\u0b30\u0b4d\u0b2f\u0b19\u0b4d\u0b15 \u0b24\u0b3e\u0b2a\u0b30\u0b47 \u0b2c\u0b3e\u0b37\u0b4d\u0b2a \u0b39\u0b4b\u0b07 \u0b2e\u0b47\u0b18 \u0b2a\u0b3e\u0b32\u0b1f\u0b47 \u0b0f\u0b2c\u0b02 \u0b2a\u0b41\u0b23\u0b3f \u0b2c\u0b30\u0b4d\u0b37\u0b3e \u0b39\u0b4b\u0b07 \u0b27\u0b30\u0b3f\u0b24\u0b4d\u0b30\u0b40\u0b15\u0b41 \u0b2b\u0b47\u0b30\u0b3f\u0b06\u0b38\u0b47 \u0964 \u0b0f\u0b39\u0b3e\u0b15\u0b41 \u0b1c\u0b33\u0b1a\u0b15\u0b4d\u0b30 \u0b15\u0b41\u0b39\u0b3e\u0b2f\u0b3e\u0b0f \u0964"
             },
             "Hindi": {
-                "Class 3": "आज हम सीखेंगे कि पानी कैसे भाप बनकर बादल बनता है और फिर बारिश बनकर धरती पर वापस आता है। इसे जल चक्र कहते हैं।"
+                "Class 3": "\u0906\u091c \u0939\u092e \u0938\u0940\u0916\u0947\u0902\u0917\u0947 \u0915\u093f \u092a\u093e\u0928\u0940 \u0915\u0948\u0938\u0947 \u092d\u093e\u092a \u092c\u0928\u0915\u0930 \u092c\u093e\u0926\u0932 \u092c\u0928\u0924\u093e \u0939\u0948 \u0914\u0930 \u092b\u093f\u0930 \u092c\u093e\u0930\u093f\u0936 \u092c\u0928\u0915\u0930 \u0927\u0930\u0924\u0940 \u092a\u0930 \u0935\u093e\u092a\u0938 \u0906\u0924\u093e \u0939\u0948\u0964 \u0907\u0938\u0947 \u091c\u0932 \u091a\u0915\u094d\u0930 \u0915\u0939\u0924\u0947 \u0939\u0948\u0902\u0964"
             }
         },
         "plants make their food using sunlight": {
             "Odia": {
-                "Class 3": "ଗଛମାନେ ସୂର୍ଯ୍ୟାଲୋକ, ପାଣି ଏବଂ ବାୟୁ ସାହାଯ୍ୟରେ ନିଜ ପତ୍ରରେ ଖାଦ୍ୟ ତିଆରି କରନ୍ତି । ଏହାକୁ ଆମେ ଆଲୋକଶ୍ଳେଷଣ କହୁ ।"
+                "Class 3": "\u0b17\u0b1b\u0b2e\u0b3e\u0b28\u0b47 \u0b38\u0b42\u0b30\u0b4d\u0b2f\u0b4d\u0b2f\u0b3e\u0b32\u0b4b\u0b15, \u0b2a\u0b3e\u0b23\u0b3f \u0b0f\u0b2c\u0b02 \u0b2c\u0b3e\u0b5f\u0b41 \u0b38\u0b3e\u0b39\u0b3e\u0b2f\u0b4d\u0b2f\u0b30\u0b47 \u0b28\u0b3f\u0b1c \u0b2a\u0b24\u0b4d\u0b30\u0b30\u0b47 \u0b16\u0b3e\u0b26\u0b4d\u0b2f \u0b24\u0b3f\u0b06\u0b30\u0b3f \u0b15\u0b30\u0b28\u0b4d\u0b24\u0b3f \u0964 \u0b0f\u0b39\u0b3e\u0b15\u0b41 \u0b06\u0b2e\u0b47 \u0b06\u0b32\u0b4b\u0b15\u0b36\u0b4d\u0b33\u0b47\u0b37\u0b23 \u0b15\u0b3f\u0b2e\u0b4d\u0b2c\u0b3e \u0b2b\u0b1f\u0b4b\u0b38\u0b3f\u0b28\u0b4d\u0b25\u0b47\u0b38\u0b3f\u0b38\u0b4d (Photosynthesis) \u0b15\u0b39\u0b41 \u0964"
             },
             "Hindi": {
-                "Class 3": "पौधे सूरज की रोशनी, पानी और हवा की मदद से अपनी पत्तियों में भोजन बनाते हैं।"
+                "Class 3": "\u092a\u094c\u0927\u0947 \u0938\u0942\u0930\u091c \u0915\u0940 \u0930\u094b\u0936\u0928\u0940, \u092a\u093e\u0928\u0940 \u0914\u0930 \u0939\u0935\u093e \u0915\u0940 \u092e\u0926\u0926 \u0938\u0947 \u0905\u092a\u0928\u0940 \u092a\u0924\u094d\u0924\u093f\u092f\u094b\u0902 \u092e\u0947\u0902 \u092d\u094b\u091c\u0928 \u092c\u0928\u093e\u0924\u0947 \u0939\u0948\u0902\u0964 \u0907\u0938 \u092a\u094d\u0930\u0915\u094d\u0930\u093f\u092f\u093e \u0915\u094b \u092a\u094d\u0930\u0915\u093e\u0936 \u0938\u0902\u0936\u094d\u0932\u0947\u0937\u0923 (Photosynthesis) \u0915\u0939\u0924\u0947 \u0939\u0948\u0902\u0964"
             }
         }
     }
@@ -169,7 +201,7 @@ class MockLLMProvider(BaseLLMProvider):
             src_code = lang_code_map.get(source_language, "auto")
             raw_translated = GoogleTranslator(source=src_code, target=tgt_code).translate(sanitized_input)
             
-            if raw_translated and not any(err_word in raw_translated.lower() for err_word in ["error 500", "server error", "that's an error", "that’s an error"]):
+            if raw_translated and not any(err_word in raw_translated.lower() for err_word in ["error 500", "server error", "that's an error"]):
                 formatted = clean_translated_text(raw_translated, target_language)
                 return {
                     "success": True,
@@ -183,9 +215,9 @@ class MockLLMProvider(BaseLLMProvider):
 
         # 3. Static fallback if network is completely offline
         if target_language == "Odia":
-            fallback = f"{clean_text} (ଏହା {grade} ଶ୍ରେଣୀର {subject} ପାଠ ଅଟେ ।)"
+            fallback = f"{clean_text} (\u0b0f\u0b39\u0b3f {grade} \u0b36\u0b4d\u0b30\u0b47\u0b23\u0b40\u0b30 {subject} \u0b2a\u0b3e\u0b07\u0b01 \u0b05\u0b28\u0b41\u0b15\u0b42\u0b33\u0b3f\u0b24)"
         elif target_language == "Hindi":
-            fallback = f"{clean_text} (यह {grade} के {subject} का पाठ है।)"
+            fallback = f"{clean_text} (\u092f\u0939 {grade} \u0915\u0947 {subject} \u0915\u0947 \u0932\u093f\u090f \u0905\u0928\u0941\u0915\u0942\u0932\u093f\u0924)"
         else:
             fallback = f"{clean_text} ({grade} {subject} adaptation)"
 
@@ -209,31 +241,31 @@ class MockLLMProvider(BaseLLMProvider):
         lower_q = clean_q.lower()
 
         # 1. Water Cycle & Evaporation
-        if any(w in lower_q for w in ["water", "evaporat", "cycle", "cloud", "rain"]) or any(w in clean_q for w in ["ବାଷ୍ପ", "ଚକ୍ର", "ପାଣି", "ମେଘ", "भाप", "वाष्प", "पानी"]):
+        if any(w in lower_q for w in ["water", "evaporat", "cycle", "cloud", "rain"]) or any(w in clean_q for w in ["\u0b2a\u0b3e\u0b23\u0b3f", "\u0b2c\u0b30\u0b4d\u0b37\u0b3e", "\u0b2e\u0b47\u0b18", "\u0b1c\u0b33\u0b1a\u0b15\u0b4d\u0b30", "\u092a\u093e\u0928\u0940", "\u092c\u093e\u0930\u093f\u0936", "\u092c\u093e\u0926\u0932"]):
             if detected_language == "Odia":
                 return {
-                    "response": "ସୂର୍ଯ୍ୟଙ୍କ ଉତ୍ତାପ ଯୋଗୁଁ ନଈ, ପୋଖରୀ ଓ ସମୁଦ୍ରର ପାଣି ଗରମ ହୋଇ ଛୋଟ ଛୋଟ ଅଦୃଶ୍ୟ ବାଷ୍ପ ପାଲଟିଯାଏ । ବାଷ୍ପ ହାଲୁକା ହୋଇଥିବାରୁ ଆକାଶକୁ ଉଡ଼ିଯାଏ ଏବଂ ଥଣ୍ଡା ହୋଇ ମେଘ ତିଆରି କରେ ।",
-                    "key_points": ["ସୂର୍ଯ୍ୟଙ୍କ ତାପରେ ପାଣି ଗରମ ହୁଏ ।", "ଗରମ ହେଲେ ପାଣି ବାଷ୍ପ ହୋଇ ଉପରକୁ ଯାଏ ।", "ମେଘରୁ ବର୍ଷା ହୋଇ ଫେରିଆସେ ।"],
-                    "example": "ଯେପରି ଗରମ ଚା' କିମ୍ବା ଭାତ ହାଣ୍ଡିରୁ ଧୂଆଁ ବାହାରି ଉପରକୁ ଉଠେ ।",
-                    "follow_up_question": "ତୁମେ କେବେ ଖରାରେ ପାଣି ଶୁଖିବା ଦେଖିଛ କି ?",
+                    "response": "\u0b38\u0b42\u0b30\u0b4d\u0b2f\u0b19\u0b4d\u0b15 \u0b09\u0b24\u0b4d\u0b24\u0b3e\u0b2a \u0b2f\u0b4b\u0b17\u0b41\u0b01 \u0b28\u0b26\u0b40, \u0b2a\u0b4b\u0b16\u0b30\u0b40 \u0b13 \u0b38\u0b2e\u0b41\u0b26\u0b4d\u0b30\u0b30 \u0b2a\u0b3e\u0b23\u0b3f \u0b17\u0b30\u0b2e \u0b39\u0b4b\u0b07 \u0b1b\u0b4b\u0b1f \u0b1b\u0b4b\u0b1f \u0b05\u0b26\u0b43\u0b36\u0b4d\u0b2f \u0b2c\u0b3e\u0b37\u0b4d\u0b2a\u0b30\u0b47 \u0b2a\u0b3e\u0b32\u0b1f\u0b3f\u0b2f\u0b3e\u0b0f \u0964 \u0b2c\u0b3e\u0b37\u0b4d\u0b2a \u0b09\u0b2a\u0b30\u0b15\u0b41 \u0b2f\u0b3e\u0b07 \u0b2e\u0b47\u0b18 \u0b24\u0b3f\u0b06\u0b30\u0b3f \u0b15\u0b30\u0b47 \u0b0f\u0b2c\u0b02 \u0b2a\u0b41\u0b23\u0b3f \u0b2c\u0b30\u0b4d\u0b37\u0b3e \u0b39\u0b4b\u0b07 \u0b2b\u0b47\u0b30\u0b3f\u0b06\u0b38\u0b47! \u0b0f\u0b39\u0b3e\u0b15\u0b41 \u0b1c\u0b33\u0b1a\u0b15\u0b4d\u0b30 (Water Cycle) \u0b15\u0b39\u0b28\u0b4d\u0b24\u0b3f \u0964",
+                    "key_points": ["\u0b38\u0b42\u0b30\u0b4d\u0b2f\u0b19\u0b4d\u0b15 \u0b24\u0b3e\u0b2a\u0b30\u0b47 \u0b2a\u0b3e\u0b23\u0b3f \u0b2c\u0b3e\u0b37\u0b4d\u0b2a \u0b39\u0b41\u0b0f \u0964", "\u0b2c\u0b3e\u0b37\u0b4d\u0b2a \u0b09\u0b2a\u0b30\u0b15\u0b41 \u0b2f\u0b3e\u0b07 \u0b2e\u0b47\u0b18 \u0b39\u0b41\u0b0f \u0964", "\u0b2e\u0b47\u0b18\u0b30\u0b41 \u0b2c\u0b30\u0b4d\u0b37\u0b3e \u0b39\u0b4b\u0b07 \u0b2b\u0b47\u0b30\u0b3f\u0b06\u0b38\u0b47 \u0964"],
+                    "example": "\u0b2f\u0b47\u0b2e\u0b3f\u0b24\u0b3f \u0b17\u0b30\u0b2e \u0b1a\u0b3e\u2019\u0b30\u0b41 \u0b27\u0b42\u0b06\u0b01 \u0b09\u0b20\u0b47, \u0b38\u0b47\u0b2e\u0b3f\u0b24\u0b3f \u0b2a\u0b3e\u0b23\u0b3f \u0b2c\u0b3e\u0b37\u0b4d\u0b2a \u0b39\u0b4b\u0b07 \u0b09\u0b2a\u0b30\u0b15\u0b41 \u0b2f\u0b3e\u0b0f \u0964",
+                    "follow_up_question": "\u0b24\u0b41\u0b2e\u0b47 \u0b15\u0b47\u0b2c\u0b47 \u0b27\u0b42\u0b2a\u0b30\u0b47 \u0b17\u0b30\u0b2e \u0b2a\u0b3e\u0b23\u0b3f \u0b36\u0b41\u0b16\u0b3f\u0b2f\u0b3e\u0b07\u0b25\u0b3f\u0b2c\u0b3e \u0b26\u0b47\u0b16\u0b3f\u0b1b ?",
                     "provider_mode": "mock",
                     "is_development_fallback": True
                 }
             elif detected_language == "Hindi":
                 return {
-                    "response": "सूरज की गर्मी से नदियों और तालाबों का पानी गरम होकर भाप बन जाता है और ऊपर आसमान में उड़ जाता है। वहां यह ठंडा होकर बादल बनाता है!",
-                    "key_points": ["धूप से पानी गरम होकर भाप बनता है।", "भाप हल्की होकर आसमान में जाती है।", "बादल बनकर बारिश होती है।"],
-                    "example": "जैसे गरम दूध या चाय से भाप ऊपर उठती है।",
-                    "follow_up_question": "क्या आपने कभी धूप में गीले कपड़े सूखते देखे हैं?",
+                    "response": "\u0938\u0942\u0930\u091c \u0915\u0940 \u0917\u0930\u094d\u092e\u0940 \u0938\u0947 \u0928\u0926\u093f\u092f\u094b\u0902, \u0924\u093e\u0932\u093e\u092c\u094b\u0902 \u0914\u0930 \u0938\u092e\u0941\u0926\u094d\u0930 \u0915\u093e \u092a\u093e\u0928\u0940 \u0917\u0930\u092e \u0939\u094b\u0915\u0930 \u092d\u093e\u092a \u092c\u0928 \u091c\u093e\u0924\u093e \u0939\u0948 \u0914\u0930 \u090a\u092a\u0930 \u0909\u0920\u0915\u0930 \u092c\u093e\u0926\u0932 \u092c\u0928\u0924\u093e \u0939\u0948\u0964 \u092b\u093f\u0930 \u092c\u093e\u0930\u093f\u0936 \u0939\u094b\u0915\u0930 \u092a\u093e\u0928\u0940 \u0935\u093e\u092a\u0938 \u0906\u0924\u093e \u0939\u0948!",
+                    "key_points": ["\u0927\u0942\u092a \u0938\u0947 \u092a\u093e\u0928\u0940 \u0917\u0930\u092e \u0939\u094b\u0915\u0930 \u092d\u093e\u092a \u092c\u0928\u0924\u093e \u0939\u0948\u0964", "\u092d\u093e\u092a \u090a\u092a\u0930 \u091c\u093e\u0915\u0930 \u092c\u093e\u0926\u0932 \u092c\u0928\u0924\u0940 \u0939\u0948\u0964", "\u092c\u093e\u0926\u0932 \u0938\u0947 \u092c\u093e\u0930\u093f\u0936 \u0939\u094b\u0924\u0940 \u0939\u0948\u0964"],
+                    "example": "\u091c\u0948\u0938\u0947 \u0917\u0930\u092e \u0926\u0942\u0927 \u092f\u093e \u091a\u093e\u092f \u0938\u0947 \u092d\u093e\u092a \u090a\u092a\u0930 \u0909\u0920\u0924\u0940 \u0939\u0948\u0964",
+                    "follow_up_question": "\u0915\u094d\u092f\u093e \u0906\u092a\u0928\u0947 \u0915\u092d\u0940 \u0927\u0942\u092a \u092e\u0947\u0902 \u0917\u0940\u0932\u0947 \u0915\u092a\u0921\u093c\u0947 \u0938\u0942\u0916\u0924\u0947 \u0926\u0947\u0916\u0947 \u0939\u0948\u0902?",
                     "provider_mode": "mock",
                     "is_development_fallback": True
                 }
             elif detected_language == "Bengali":
                 return {
-                    "response": "সূর্যের তাপে নদী এবং পুকুরের জল গরম হয়ে বাষ্পে পরিণত হয় এবং ওপরে উঠে মেঘ তৈরি করে।",
-                    "key_points": ["সূর্যের তাপে জল গরম হয়।", "বাষ্প ওপরে উঠে মেঘ হয়।"],
-                    "example": "যেমন গরম চায়ের কাপ থেকে ধোঁয়া ওঠে।",
-                    "follow_up_question": "তুমি কি কখনো রোদে জল শুকাতে দেখেছ?",
+                    "response": "\u09b8\u09c2\u09b0\u09cd\u09af\u09c7\u09b0 \u09a4\u09be\u09aa\u09c7 \u09a8\u09a6\u09c0 \u098f\u09ac\u0982 \u09aa\u09c1\u0995\u09c1\u09b0\u09c7\u09b0 \u099c\u09b2 \u0997\u09b0\u09ae \u09b9\u09df\u09c7 \u09ac\u09be\u09b7\u09cd\u09aa\u09c7 \u09aa\u09b0\u09bf\u09a3\u09a4 \u09b9\u09df \u098f\u09ac\u0982 \u0993\u09aa\u09b0\u09c7 \u0989\u09a0\u09c7 \u09ae\u09c7\u0998 \u09a4\u09c8\u09b0\u09bf \u0995\u09b0\u09c7\u0964",
+                    "key_points": ["\u09b8\u09c2\u09b0\u09cd\u09af\u09c7\u09b0 \u09a4\u09be\u09aa\u09c7 \u099c\u09b2 \u0997\u09b0\u09ae \u09b9\u09df\u0964", "\u09ac\u09be\u09b7\u09cd\u09aa \u0993\u09aa\u09b0\u09c7 \u0989\u09a0\u09c7 \u09ae\u09c7\u0998 \u09b9\u09df\u0964"],
+                    "example": "\u09af\u09c7\u09ae\u09a8 \u0997\u09b0\u09ae \u099a\u09be\u09df\u09c7\u09b0 \u0995\u09be\u09aa \u09a5\u09c7\u0995\u09c7 \u09a7\u09cb\u0981\u09df\u09be \u0993\u09a0\u09c7\u0964",
+                    "follow_up_question": "\u09a4\u09c1\u09ae\u09bf \u0995\u09bf \u0995\u0996\u09a8\u09cb \u09b0\u09cb\u09a6\u09c7 \u099c\u09b2 \u09b6\u09c1\u0995\u09be\u09a4\u09c7 \u09a6\u09c7\u0996\u09c7\u099b?",
                     "provider_mode": "mock",
                     "is_development_fallback": True
                 }
@@ -248,11 +280,231 @@ class MockLLMProvider(BaseLLMProvider):
                 }
 
         # 2. Plants, Photosynthesis & Food
+        if any(w in lower_q for w in ["plant", "food", "sunlight", "photosynth", "leaf", "leaves"]) or any(w in clean_q for w in ["\u0b17\u0b1b", "\u0b16\u0b3e\u0b26\u0b4d\u0b2f", "\u0b38\u0b42\u0b30\u0b4d\u0b2f\u0b4d\u0b2f", "\u092a\u094c\u0927\u0947", "\u092d\u094b\u091c\u0928", "\u0b2a\u0b24\u0b4d\u0b30"]):
+            if detected_language == "Odia":
+                return {
+                    "response": "\u0b17\u0b1b\u0b2e\u0b3e\u0b28\u0b47 \u0b38\u0b42\u0b30\u0b4d\u0b2f\u0b4d\u0b2f\u0b3e\u0b32\u0b4b\u0b15, \u0b2a\u0b3e\u0b23\u0b3f \u0b0f\u0b2c\u0b02 \u0b2c\u0b3e\u0b5f\u0b41\u0b30 \u0b38\u0b3e\u0b39\u0b3e\u0b2f\u0b4d\u0b2f\u0b30\u0b47 \u0b28\u0b3f\u0b1c \u0b2a\u0b24\u0b4d\u0b30\u0b30\u0b47 \u0b16\u0b3e\u0b26\u0b4d\u0b2f \u0b24\u0b3f\u0b06\u0b30\u0b3f \u0b15\u0b30\u0b28\u0b4d\u0b24\u0b3f \u0964 \u0b0f\u0b39\u0b3e\u0b15\u0b41 \u0b06\u0b32\u0b4b\u0b15\u0b36\u0b4d\u0b33\u0b47\u0b37\u0b23 \u0b15\u0b3f\u0b2e\u0b4d\u0b2c\u0b3e \u0b2b\u0b1f\u0b4b\u0b38\u0b3f\u0b28\u0b4d\u0b25\u0b47\u0b38\u0b3f\u0b38\u0b4d (Photosynthesis) \u0b15\u0b39\u0b28\u0b4d\u0b24\u0b3f \u0964",
+                    "key_points": ["\u0b17\u0b1b \u0b38\u0b42\u0b30\u0b4d\u0b2f\u0b4d\u0b2f\u0b3e\u0b32\u0b4b\u0b15 \u0b2c\u0b4d\u0b2f\u0b2c\u0b39\u0b3e\u0b30 \u0b15\u0b30\u0b47 \u0964", "\u0b2a\u0b3e\u0b23\u0b3f \u0b13 \u0b2c\u0b3e\u0b5f\u0b41 \u0b2e\u0b27\u0b4d\u0b2f \u0b32\u0b3e\u0b17\u0b47 \u0964", "\u0b2a\u0b24\u0b4d\u0b30\u0b30\u0b47 \u0b16\u0b3e\u0b26\u0b4d\u0b2f \u0b24\u0b3f\u0b06\u0b30\u0b3f \u0b39\u0b41\u0b0f \u0964"],
+                    "example": "\u0b2f\u0b47\u0b2e\u0b3f\u0b24\u0b3f \u0b06\u0b2e\u0b47 \u0b30\u0b3e\u0b28\u0b4d\u0b27\u0b3e \u0b18\u0b30\u0b47 \u0b16\u0b3e\u0b26\u0b4d\u0b2f \u0b24\u0b3f\u0b06\u0b30\u0b3f \u0b15\u0b30\u0b41, \u0b17\u0b1b \u0b2a\u0b24\u0b4d\u0b30\u0b30\u0b47 \u0b24\u0b3f\u0b06\u0b30\u0b3f \u0b15\u0b30\u0b47 \u0964",
+                    "follow_up_question": "\u0b17\u0b1b \u0b15\u0b3e\u0b39\u0b3f\u0b01\u0b15\u0b3f \u0b38\u0b2c\u0b41\u0b1c \u0b30\u0b19\u0b4d\u0b17\u0b30 \u0b39\u0b41\u0b0f \u0b1c\u0b3e\u0b23 ?",
+                    "provider_mode": "mock",
+                    "is_development_fallback": True
+                }
+            elif detected_language == "Hindi":
+                return {
+                    "response": "\u092a\u094c\u0927\u0947 \u0938\u0942\u0930\u091c \u0915\u0940 \u0930\u094b\u0936\u0928\u0940, \u092a\u093e\u0928\u0940 \u0914\u0930 \u0939\u0935\u093e \u0915\u0940 \u092e\u0926\u0926 \u0938\u0947 \u0905\u092a\u0928\u0940 \u092a\u0924\u094d\u0924\u093f\u092f\u094b\u0902 \u092e\u0947\u0902 \u092d\u094b\u091c\u0928 \u092c\u0928\u093e\u0924\u0947 \u0939\u0948\u0902\u0964 \u0907\u0938\u0947 \u092a\u094d\u0930\u0915\u093e\u0936 \u0938\u0902\u0936\u094d\u0932\u0947\u0937\u0923 (Photosynthesis) \u0915\u0939\u0924\u0947 \u0939\u0948\u0902\u0964",
+                    "key_points": ["\u092a\u094c\u0927\u0947 \u0938\u0942\u0930\u091c \u0915\u0940 \u0930\u094b\u0936\u0928\u0940 \u0932\u0947\u0924\u0947 \u0939\u0948\u0902\u0964", "\u092a\u093e\u0928\u0940 \u0914\u0930 \u0939\u0935\u093e \u091c\u0930\u0942\u0930\u0940 \u0939\u0948\u0964", "\u092a\u0924\u094d\u0924\u093f\u092f\u094b\u0902 \u092e\u0947\u0902 \u092d\u094b\u091c\u0928 \u092c\u0928\u0924\u093e \u0939\u0948\u0964"],
+                    "example": "\u091c\u0948\u0938\u0947 \u0939\u092e \u0930\u0938\u094b\u0908 \u092e\u0947\u0902 \u0916\u093e\u0928\u093e \u092c\u0928\u093e\u0924\u0947 \u0939\u0948\u0902, \u092a\u094c\u0927\u0947 \u092a\u0924\u094d\u0924\u093f\u092f\u094b\u0902 \u092e\u0947\u0902 \u092c\u0928\u093e\u0924\u0947 \u0939\u0948\u0902\u0964",
+                    "follow_up_question": "\u092a\u094c\u0927\u094b\u0902 \u0915\u0940 \u092a\u0924\u094d\u0924\u093f\u092f\u093e\u0901 \u0939\u0930\u0940 \u0915\u094d\u092f\u094b\u0902 \u0939\u094b\u0924\u0940 \u0939\u0948\u0902?",
+                    "provider_mode": "mock",
+                    "is_development_fallback": True
+                }
+            else:
+                return {
+                    "response": "Plants are amazing! They use sunlight, water from the soil, and air to make their own food inside their green leaves. This process is called Photosynthesis!",
+                    "key_points": ["Plants use sunlight to make food.", "They need water and air too.", "Food is made in the leaves."],
+                    "example": "Just like we cook food in a kitchen, plants cook their food in their green leaves using sunlight!",
+                    "follow_up_question": "Do you know why leaves are green?",
+                    "provider_mode": "mock",
+                    "is_development_fallback": True
+                }
+
+        # 3. Generic fallback for unknown topics
+        if detected_language == "Odia":
+            return {
+                "response": f"\u098f\u099f\u09bf \u098f\u0995\u099f\u09bf \u09ad\u09be\u09b2\u09cb \u09aa\u09cd\u09b0\u09b6\u09cd\u09a8! {topic} \u0b2c\u0b3f\u0b37\u0b5f\u0b30\u0b47 \u0b06\u0b09 \u0b36\u0b3f\u0b16\u0b3f\u0b2c\u0b3e \u0964 \u0b24\u0b41\u0b2e\u0b30 \u0b36\u0b3f\u0b15\u0b4d\u0b37\u0b15\u0b19\u0b4d\u0b15\u0b41 \u0b2a\u0b1a\u0b3e\u0b30\u0b3f\u0b32\u0b47 \u0b38\u0b47\u0b2e\u0b3e\u0b28\u0b47 \u0b06\u0b39\u0b41\u0b30\u0b3f \u0b2d\u0b32 \u0b15\u0b30\u0b3f \u0b2c\u0b41\u0b1d\u0b3e\u0b07\u0b26\u0b47\u0b2c\u0b47 \u0964",
+                "key_points": [],
+                "example": "",
+                "follow_up_question": "\u0b24\u0b41\u0b2e\u0b47 \u0b06\u0b09 \u0b15\u0b3f\u0b1b\u0b3f \u0b1c\u0b3e\u0b23\u0b3f\u0b2c\u0b3e\u0b15\u0b41 \u0b1a\u0b3e\u0b39\u0b41\u0b01\u0b1b ?",
+                "provider_mode": "mock",
+                "is_development_fallback": True
+            }
+        elif detected_language == "Hindi":
+            return {
+                "response": f"\u092c\u0939\u0941\u0924 \u0905\u091a\u094d\u091b\u093e \u0938\u0935\u093e\u0932! {topic} \u0915\u0947 \u092c\u093e\u0930\u0947 \u092e\u0947\u0902 \u0914\u0930 \u0938\u0940\u0916\u0924\u0947 \u0939\u0948\u0902\u0964 \u0905\u092a\u0928\u0947 \u0936\u093f\u0915\u094d\u0937\u0915 \u0938\u0947 \u092a\u0942\u091b\u094b \u0924\u094b \u0935\u0947 \u0914\u0930 \u0905\u091a\u094d\u091b\u0947 \u0938\u0947 \u0938\u092e\u091d\u093e\u090f\u0902\u0917\u0947\u0964",
+                "key_points": [],
+                "example": "",
+                "follow_up_question": "\u0915\u094d\u092f\u093e \u0906\u092a \u0914\u0930 \u0915\u0941\u091b \u091c\u093e\u0928\u0928\u093e \u091a\u093e\u0939\u0924\u0947 \u0939\u0948\u0902?",
+                "provider_mode": "mock",
+                "is_development_fallback": True
+            }
+        else:
+            return {
+                "response": f"Great question! Let's explore {topic} together. Ask your teacher and they'll explain it wonderfully!",
+                "key_points": [],
+                "example": "",
+                "follow_up_question": "Would you like to know more about something else?",
+                "provider_mode": "mock",
+                "is_development_fallback": True
+            }
+
+
+# =============================================================================
+# GOOGLE GEMINI NATIVE PROVIDER (Primary)
+# =============================================================================
+
+class GeminiLLMProvider(BaseLLMProvider):
+    """
+    Native Google Gemini LLM Provider using the google-genai SDK.
+    Uses the Gemini API directly for high-quality multilingual educational responses.
+    Includes multi-model candidate failover and loop degeneration guards.
+    """
+
+    CANDIDATE_MODELS = [
+        "gemini-3.7-flash",
+        "gemini-3.6-flash",
+        "gemini-3.5-flash",
+        "gemini-2.5-flash-lite"
+    ]
+
+    def __init__(
+        self,
+        api_key: str,
+        model: str = "gemini-3.7-flash",
+        timeout_seconds: float = 25.0
+    ):
+        from google import genai
+        self.api_key = api_key.strip()
+        self.model_name = model if model in self.CANDIDATE_MODELS else "gemini-3.7-flash"
+        self.timeout = timeout_seconds
+
+        # Create the Gemini client
+        self.client = genai.Client(api_key=self.api_key)
+
+        logger.info(f"GeminiLLMProvider initialized with model: {self.model_name}")
+
+    def _generate(self, system_prompt: str, user_prompt: str, temperature: float = 0.35, max_tokens: int = 800) -> str:
+        """Execute a Gemini generation call with system + user prompt and multi-model failover."""
+        from google.genai import types
+
+        config = types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            temperature=temperature,
+            max_output_tokens=max_tokens,
+            top_p=0.95,
+            safety_settings=[
+                types.SafetySetting(category="HARM_CATEGORY_HARASSMENT", threshold="OFF"),
+                types.SafetySetting(category="HARM_CATEGORY_HATE_SPEECH", threshold="OFF"),
+                types.SafetySetting(category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="OFF"),
+                types.SafetySetting(category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="OFF"),
+            ]
+        )
+
+        models_to_try = [self.model_name] + [m for m in self.CANDIDATE_MODELS if m != self.model_name]
+        last_error = None
+
+        for candidate in models_to_try:
+            try:
+                response = self.client.models.generate_content(
+                    model=candidate,
+                    contents=user_prompt,
+                    config=config,
+                )
+
+                if response and response.text:
+                    generated = response.text.strip()
+                    # Clean markdown fencing
+                    generated = re.sub(r"^```[a-z]*\s*", "", generated)
+                    generated = re.sub(r"\s*```$", "", generated)
+                    generated = generated.strip('"').strip("'").strip()
+                    # Post-process repetition loop cleanup
+                    generated = clean_repetitive_loops(generated)
+                    if generated:
+                        self.model_name = candidate
+                        return generated
+
+                logger.warning(f"Model {candidate} returned empty response. Trying next candidate...")
+            except Exception as e:
+                last_error = e
+                err_str = str(e).lower()
+                if "api key" in err_str or "permission" in err_str or "403" in err_str:
+                    raise ValueError(f"Invalid Google Gemini API Key: {e}")
+                logger.warning(f"Gemini candidate {candidate} failed ({e}). Trying next model...")
+
+        raise RuntimeError(f"All Gemini models failed. Last error: {last_error}")
+
+    def generate_response(
+        self,
+        text: str,
+        target_language: str,
+        grade: str,
+        subject: str,
+        source_language: str = "English"
+    ) -> Dict[str, Any]:
+        if not self.api_key:
+            raise ValueError("Google Gemini API key is missing or unconfigured.")
+
+        user_content = build_user_prompt(
+            text=text,
+            target_language=target_language,
+            grade=grade,
+            subject=subject,
+            source_language=source_language
+        )
+
+        generated_text = self._generate(
+            system_prompt=SYSTEM_PROMPT,
+            user_prompt=user_content,
+            temperature=0.35,
+            max_tokens=800
+        )
+
+        return {
+            "success": True,
+            "language": target_language,
+            "response": generated_text,
+            "provider_mode": "gemini",
+            "model": self.model_name,
+            "is_development_fallback": False
+        }
+
+    def generate_tutor_response(
+        self,
+        query: str,
+        detected_language: str,
+        grade: str = "Class 3",
+        subject: str = "Science",
+        topic: str = "General"
+    ) -> Dict[str, Any]:
+        if not self.api_key:
+            raise ValueError("Google Gemini API key is missing or unconfigured.")
+
+        user_content = build_student_tutor_user_prompt(
+            query=query,
+            grade=grade,
+            subject=subject,
+            topic=topic,
+            language_hint=detected_language
+        )
+
+        generated_text = self._generate(
+            system_prompt=STUDENT_TUTOR_SYSTEM_PROMPT,
+            user_prompt=user_content,
+            temperature=0.4,
+            max_tokens=800
+        )
+
+        return {
+            "response": generated_text,
+            "key_points": [],
+            "example": "",
+            "follow_up_question": "",
+            "provider_mode": "gemini",
+            "model": self.model_name,
+            "is_development_fallback": False
+        }
+
+
+# =============================================================================
+# OPENAI-COMPATIBLE PROVIDER (Fallback for Groq / OpenAI / other endpoints)
+# =============================================================================
+
 class OpenAILLMProvider(BaseLLMProvider):
     """
-    Production-grade LLM Provider.
-    Supports any OpenAI-compatible chat completion API endpoint
-    (e.g., Groq Qwen/Llama, OpenAI GPT-4o-mini, Google Gemini, Ollama).
+    OpenAI-compatible chat completion provider.
+    Supports any OpenAI-compatible API endpoint
+    (e.g., Groq Qwen/Llama, OpenAI GPT-4o-mini, Ollama).
+    Used as fallback when Gemini is not configured.
     """
 
     def __init__(
@@ -268,9 +520,6 @@ class OpenAILLMProvider(BaseLLMProvider):
         if self.api_key.startswith("gsk_") or "groq" in (api_base or "").lower():
             default_base = "https://api.groq.com/openai/v1"
             default_model = "qwen/qwen3.8-27b"
-        elif self.api_key.startswith("AIza") or "google" in (api_base or "").lower():
-            default_base = "https://generativelanguage.googleapis.com/v1beta/openai"
-            default_model = "gemini-1.5-flash"
         else:
             default_base = "https://api.openai.com/v1"
             default_model = "gpt-4o-mini"
@@ -419,10 +668,15 @@ class OpenAILLMProvider(BaseLLMProvider):
         }
 
 
+# =============================================================================
+# LLM SERVICE FACADE
+# =============================================================================
+
 class LLMService:
     """
     LLM Service Facade.
     Isolates external LLM invocation, handles DEMO_MODE fallback, and provides unified error handling.
+    Provider priority: Google Gemini (native) > OpenAI-compatible (Groq/OpenAI) > Mock (demo).
     """
 
     SUPPORTED_LANGUAGES = [
@@ -432,6 +686,30 @@ class LLMService:
 
     def get_provider(self) -> BaseLLMProvider:
         demo_mode = os.getenv("DEMO_MODE", "False").lower() in ["true", "1", "yes"]
+
+        # If demo mode is explicitly active, always use mock
+        if demo_mode:
+            logger.info("DEMO_MODE active — using MockLLMProvider.")
+            return MockLLMProvider()
+
+        # 1. Try Google Gemini API key first (primary provider)
+        google_api_key = (
+            os.getenv("GOOGLE_API_KEY") or
+            os.getenv("GEMINI_API_KEY") or
+            ""
+        ).strip()
+
+        google_placeholder = google_api_key.lower() in ["your_api_key_here", "your_google_api_key_here", "placeholder", "none", ""]
+
+        if google_api_key and not google_placeholder:
+            gemini_model = os.getenv("GEMINI_MODEL") or os.getenv("LLM_MODEL") or "gemini-3.6-flash"
+            # Ensure we use a Gemini-compatible model name
+            if not gemini_model.startswith("gemini"):
+                gemini_model = "gemini-3.6-flash"
+            logger.info(f"Using GeminiLLMProvider with model: {gemini_model}")
+            return GeminiLLMProvider(api_key=google_api_key, model=gemini_model)
+
+        # 2. Fallback to OpenAI-compatible provider (Groq, OpenAI, etc.)
         api_key = (
             os.getenv("LLM_API_KEY") or 
             os.getenv("OPENAI_API_KEY") or 
@@ -440,12 +718,19 @@ class LLMService:
         ).strip()
 
         is_placeholder = api_key.lower() in ["your_api_key_here", "your_llm_api_key_here", "placeholder", "none", ""]
-        # If demo mode is active or no API key is provided, use MockLLMProvider
-        if demo_mode or not api_key or is_placeholder or getattr(settings, "LLM_PROVIDER", "mock").lower() == "mock":
+
+        if not api_key or is_placeholder:
+            logger.info("No valid API key found — using MockLLMProvider.")
+            return MockLLMProvider()
+
+        # Check if provider is explicitly set to mock
+        if getattr(settings, "LLM_PROVIDER", "mock").lower() == "mock":
+            logger.info("LLM_PROVIDER=mock — using MockLLMProvider.")
             return MockLLMProvider()
 
         model = os.getenv("LLM_MODEL") or getattr(settings, "LLM_MODEL", "llama-3.3-70b-versatile")
         api_base = os.getenv("LLM_API_BASE") or getattr(settings, "LLM_API_BASE", None)
+        logger.info(f"Using OpenAILLMProvider with model: {model}")
         return OpenAILLMProvider(api_key=api_key, model=model, api_base=api_base)
 
     def respond(

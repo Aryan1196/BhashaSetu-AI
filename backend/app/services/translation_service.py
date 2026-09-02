@@ -16,12 +16,34 @@ def clean_input_text(text: str) -> str:
     return cleaned
 
 def clean_translated_text(text: str, target_language: str = "Odia") -> str:
+    """
+    Sanitizes translated text to ensure grammatical flow and scripts are clean.
+    Also strips out repetitive token loops or degenerated stuttering words.
+    """
     if not text:
         return ""
+    
     cleaned = text.strip()
-    # Replace stray ASCII vertical bars '|' with proper Odia/Hindi purna chhed '।'
-    if target_language in ["Odia", "Hindi"]:
-        cleaned = re.sub(r'\s*\|\s*', ' । ', cleaned)
+
+    # Deduplicate repeating word loops (e.g., 'ଗୋଟିଏ ଗୋଟିଏ ଗୋଟିଏ...')
+    tokens = cleaned.split()
+    if tokens:
+        cleaned_tokens = []
+        i = 0
+        while i < len(tokens):
+            w = tokens[i]
+            cleaned_tokens.append(w)
+            while i + 1 < len(tokens) and tokens[i + 1] == w:
+                i += 1
+            i += 1
+        cleaned = " ".join(cleaned_tokens)
+
+    # Odia & Hindi specific script cleanups
+    if target_language == "Odia":
+        cleaned = re.sub(r'[\u0000-\u001f\u007f-\u009f]', '', cleaned)
+        cleaned = re.sub(r'।\s*।', '।', cleaned)
+    elif target_language == "Hindi":
+        cleaned = re.sub(r'[\u0000-\u001f\u007f-\u009f]', '', cleaned)
         cleaned = re.sub(r'।\s*।', '।', cleaned)
     cleaned = re.sub(r'\s+', ' ', cleaned).strip()
     return cleaned

@@ -50,7 +50,33 @@ OUTPUT STRUCTURE (JSON format):
 
 ---
 
-## 4. API Specification (`POST /api/pedagogy/explain`)
+## 4. Technical Term and Jargon Handling
+
+Technical and subject-specific terminology must be handled carefully:
+
+1. **Identify**: Identify important technical, scientific, mathematical, and subject-specific terms in the teacher's input.
+2. **No Blind Translation**: Do not blindly translate technical terms word-for-word if doing so could reduce accuracy or make the term unfamiliar.
+3. **Established Equivalents**: If a technical term has a well-established and commonly understood equivalent in the target language, use the appropriate equivalent.
+4. **Preserve International Terms with Explanation**: If the technical term is commonly taught using its English/international form, preserve the original term and provide a simple explanation in the target language.
+5. **Dual-Script Presentation Pattern**: For primary-school students, introduce difficult terminology using this pattern when appropriate:
+   ```text
+   [Target-language explanation/term] ([Original technical term])
+   ```
+   *Example*: `"ଫଟୋସିନ୍ଥେସିସ୍ (Photosynthesis)"` or `"ବାଷ୍ପୀଭବନ (Evaporation)"`
+6. **Age-Appropriate Explanation**: After introducing a difficult technical term, explain its meaning using simple, age-appropriate language.
+7. **Maintain Accuracy**: Do not replace established scientific or mathematical terminology with inaccurate everyday words.
+8. **Grade & Subject Context**: Consider the student's grade and subject when deciding how much terminology to retain.
+9. **Class 1-2**: Minimize technical terminology and explain concepts using very simple language.
+10. **Class 3-5**: Preserve important curriculum terminology but explain it in simple language.
+11. **No Unreliable Translations**: If a technical term has no reliable natural equivalent in the target language, retain the original term and explain it rather than inventing a translation.
+12. **Never Invent Words**: Never invent a translated technical term.
+13. **Scientific & Educational Rigor**: Maintain the accuracy of scientific, mathematical, and educational terminology.
+14. **Core Equation**:
+    $$\text{ACCURATE TERM} \longrightarrow \text{SIMPLE EXPLANATION} \longrightarrow \text{GRADE-APPROPRIATE UNDERSTANDING}$$
+
+---
+
+## 5. API Specification (`POST /api/pedagogy/explain`)
 
 - **Endpoint**: `POST /api/pedagogy/explain`
 - **Payload**:
@@ -65,7 +91,7 @@ OUTPUT STRUCTURE (JSON format):
 - **Response**:
   ```json
   {
-    "simple_explanation": "ସୂର୍ଯ୍ୟଙ୍କ ତାପରେ ପାଣି ଗରମ ହୋଇ ବାଷ୍ପ ପାଲଟିଯାଏ । ଏହାକୁ ଆମେ ବାଷ୍ପୀଭବନ ବୋଲି କୁହାଯାଏ ।",
+    "simple_explanation": "ସୂର୍ଯ୍ୟଙ୍କ ତାପରେ ପାଣି ଗରମ ହୋଇ ବାଷ୍ପ ପାଲଟିଯାଏ । ଏହାକୁ ଆମେ ବାଷ୍ପୀଭବନ (Evaporation) ବୋଲି କହୁ ।",
     "key_points": [
       "ସୂର୍ଯ୍ୟଙ୍କ ତାପ ଯୋଗୁଁ ପାଣି ଗରମ ହୁଏ ।",
       "ଗରମ ହେଲେ ପାଣି ବାଷ୍ପ ହୋଇ ଉପରକୁ ଉଠିଯାଏ ।"

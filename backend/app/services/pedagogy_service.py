@@ -17,7 +17,7 @@ class MockPedagogyProvider(BasePedagogyProvider):
     PEDAGOGY_KB = {
         3: {
             "Odia": {
-                "simple_explanation": "ସୂର୍ଯ୍ୟଙ୍କ ତାପରେ ପାଣି ଗରମ ହୋଇ ବାଷ୍ପ ପାଲଟିଯାଏ । ଏହାକୁ ଆମେ ବାଷ୍ପୀଭବନ ବୋଲି କୁହାଯାଏ ।",
+                "simple_explanation": "ସୂର୍ଯ୍ୟଙ୍କ ତାପରେ ପାଣି ଗରମ ହୋଇ ବାଷ୍ପ ପାଲଟିଯାଏ । ଏହାକୁ ଆମେ ବାଷ୍ପୀଭବନ (Evaporation) ବୋଲି କହୁ ।",
                 "key_points": [
                     "ସୂର୍ଯ୍ୟଙ୍କ ତାପ ଯୋଗୁଁ ପାଣି ଗରମ ହୁଏ ।",
                     "ଗରମ ହେଲେ ପାଣି ବାଷ୍ପ ହୋଇ ଉପରକୁ ଉଠିଯାଏ ।"
@@ -26,7 +26,7 @@ class MockPedagogyProvider(BasePedagogyProvider):
                 "learner_question": "ଖରାରେ ପାଣି ଥାଳି ରଖିଲେ ପାଣି କୁଆଡ଼େ ଯାଏ ?"
             },
             "Hindi": {
-                "simple_explanation": "सूरज की गर्मी से पानी गरम होकर भाप बन जाता है। इसे वाष्पीकरण कहते हैं।",
+                "simple_explanation": "सूरज की गर्मी से पानी गरम होकर भाप बन जाता है। इसे हम वाष्पीकरण (Evaporation) कहते हैं।",
                 "key_points": [
                     "सूरज की गर्मी से पानी गरम होता है।",
                     "गरम होने पर पानी भाप बनकर ऊपर उड़ जाता है।"
@@ -35,7 +35,7 @@ class MockPedagogyProvider(BasePedagogyProvider):
                 "learner_question": "धूप में कटोरी में रखा पानी कहाँ चला जाता है?"
             },
             "English": {
-                "simple_explanation": "The sun heats water on the ground and turns it into invisible steam called water vapour.",
+                "simple_explanation": "The sun heats water on the ground and turns it into invisible steam called water vapour (Evaporation).",
                 "key_points": [
                     "Sunlight makes water hot.",
                     "Warm water turns into steam and rises into the air."
