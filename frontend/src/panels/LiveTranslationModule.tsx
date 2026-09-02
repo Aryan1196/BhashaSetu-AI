@@ -508,12 +508,7 @@ export const LiveTranslationModule: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center space-x-3">
-          <Button variant="primary" size="sm" onClick={() => { setActivePanel(5); navigate('/pedagogy'); }}>
-            <span>View Pedagogical Adaptation</span>
-            <ArrowRight className="w-4 h-4" />
-          </Button>
-        </div>
+
       </div>
 
       {/* Error Alert Banner */}
