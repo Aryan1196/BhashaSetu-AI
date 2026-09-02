@@ -7,7 +7,6 @@ import {
   Mic, 
   Bot, 
   Settings,
-  Sparkles,
   Menu,
   X,
   GraduationCap,
@@ -27,7 +26,6 @@ export const Sidebar = () => {
     { id: 12, label: 'Student Dashboard', icon: GraduationCap, panel: 12, path: '/student/dashboard', roles: ['Student'] },
     { id: 3, label: 'New Lesson Setup', icon: BookOpen, panel: 3, path: '/teacher/new-lesson', roles: ['Teacher'] },
     { id: 4, label: 'Live Translation', icon: Mic, panel: 4, path: '/teacher/live', roles: ['Teacher'] },
-    { id: 5, label: 'Adaptation View', icon: Sparkles, panel: 5, path: '/pedagogy', roles: ['Teacher', 'Student'] },
     { id: 7, label: 'Student AI Tutor', icon: Bot, panel: 7, path: '/tutor', roles: ['Student'] },
     { id: 11, label: 'Settings', icon: Settings, panel: 11, path: '/settings', roles: ['Teacher', 'Student'] },
   ];
