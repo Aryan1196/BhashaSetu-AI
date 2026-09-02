@@ -181,11 +181,56 @@ export const LiveTranslationModule: React.FC = () => {
     }
   };
 
+  // Helper: Start Browser Native SpeechRecognition fallback
+  const startBrowserSpeechFallback = () => {
+    if (recognitionRef.current) return;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      console.warn("Browser SpeechRecognition not supported in this browser.");
+      return;
+    }
+    try {
+      const recognition = new SpeechRecognition();
+      recognitionRef.current = recognition;
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = currentLesson.sourceLang === 'Hindi' ? 'hi-IN' : 'en-US';
+
+      recognition.onresult = (event: any) => {
+        let interim = '';
+        let final = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const res = event.results[i];
+          if (res.isFinal) {
+            final += res[0].transcript + ' ';
+          } else {
+            interim += res[0].transcript;
+          }
+        }
+        if (final.trim() || interim.trim()) {
+          handleLiveSpeechUpdate(final.trim(), interim.trim());
+        }
+      };
+
+      recognition.onerror = (e: any) => {
+        console.warn("Browser SpeechRecognition notice:", e);
+      };
+
+      recognition.start();
+      console.log("Browser SpeechRecognition fallback started");
+    } catch (recErr) {
+      console.warn("SpeechRecognition init notice:", recErr);
+    }
+  };
+
   // Setup Web Audio Analyser & PCM Streaming
   const setupAudioProcessing = (stream: MediaStream, activeKey: string) => {
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioCtx) return;
+      if (!AudioCtx) {
+        startBrowserSpeechFallback();
+        return;
+      }
       
       const audioCtx = new AudioCtx({ sampleRate: 16000 });
       audioCtxRef.current = audioCtx;
@@ -213,6 +258,12 @@ export const LiveTranslationModule: React.FC = () => {
         animFrameRef.current = requestAnimationFrame(updateVisualizer);
       };
       updateVisualizer();
+
+      if (!activeKey) {
+        setIsDeepgramLive(false);
+        startBrowserSpeechFallback();
+        return;
+      }
 
       // Deepgram Linear16 PCM streaming via ScriptProcessor
       const scriptProcessor = audioCtx.createScriptProcessor(4096, 1, 1);
@@ -266,11 +317,22 @@ export const LiveTranslationModule: React.FC = () => {
       };
 
       ws.onerror = (err) => {
-        console.warn("Direct Deepgram WebSocket error, browser speech engine will maintain live capture:", err);
+        console.warn("Direct Deepgram WebSocket error, falling back to browser speech engine:", err);
+        setIsDeepgramLive(false);
+        startBrowserSpeechFallback();
+      };
+
+      ws.onclose = (event) => {
+        if (!event.wasClean && isRecording) {
+          console.warn("Deepgram WebSocket closed unexpectedly, activating browser speech engine fallback.");
+          setIsDeepgramLive(false);
+          startBrowserSpeechFallback();
+        }
       };
 
     } catch (e) {
-      console.warn("Audio processing setup warning:", e);
+      console.warn("Audio processing setup warning, falling back to browser speech engine:", e);
+      startBrowserSpeechFallback();
     }
   };
 
@@ -320,45 +382,9 @@ export const LiveTranslationModule: React.FC = () => {
       mediaRecorder.start(250);
     } catch (e) {}
 
-    // 3. Connect Deepgram Linear16 PCM WebSocket + Visualizer
+    // 3. Connect Deepgram Linear16 PCM WebSocket + Visualizer (falls back to Browser SpeechRecognition if needed)
     const activeKey = (deepgramKey || '23dae82420be843b3b183028b35162dfca167b8c').trim();
     setupAudioProcessing(stream, activeKey);
-
-    // 4. Setup Browser Native SpeechRecognition for instant live feedback
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      try {
-        const recognition = new SpeechRecognition();
-        recognitionRef.current = recognition;
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = currentLesson.sourceLang === 'Hindi' ? 'hi-IN' : 'en-US';
-
-        recognition.onresult = (event: any) => {
-          let interim = '';
-          let final = '';
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            const res = event.results[i];
-            if (res.isFinal) {
-              final += res[0].transcript + ' ';
-            } else {
-              interim += res[0].transcript;
-            }
-          }
-          if (final.trim() || interim.trim()) {
-            handleLiveSpeechUpdate(final.trim(), interim.trim());
-          }
-        };
-
-        recognition.onerror = (e: any) => {
-          console.warn("Browser SpeechRecognition notice:", e);
-        };
-
-        recognition.start();
-      } catch (recErr) {
-        console.warn("SpeechRecognition init notice:", recErr);
-      }
-    }
   };
 
   // Workflow Handler: STOP SPEAKING & GENERATE LLM EDUCATIONAL RESPONSE
